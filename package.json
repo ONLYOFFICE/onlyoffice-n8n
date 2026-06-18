@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "n8n nodes for ONLYOFFICE Document Server (Docs)",
   "license": "MIT",
-  "homepage": "https://github.com/ONLYOFFICE/onlyoffice-docs-n8n/",
+  "homepage": "https://github.com/ONLYOFFICE/onlyoffice-n8n/",
   "author": {
     "name": "Ascensio System SIA",
     "email": "integration@onlyoffice.com",
@@ -11,10 +11,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ONLYOFFICE/onlyoffice-docs-n8n"
+    "url": "https://github.com/ONLYOFFICE/onlyoffice-n8n"
   },
   "bugs": {
-    "url": "https://github.com/ONLYOFFICE/onlyoffice-docs-n8n/issues/",
+    "url": "https://github.com/ONLYOFFICE/onlyoffice-n8n/issues/",
     "email": "support@onlyoffice.com"
   },
   "keywords": [
