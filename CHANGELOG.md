@@ -1,0 +1,34 @@
+# Changelog
+
+This document records all notable changes to the project, following the [Keep a
+Changelog] format and adhering to [Semantic Versioning].
+
+## [Unreleased]
+
+There are no noticeable changes in version [unreleased].
+
+## [0.1.0] - 2026-06-18
+
+### Added
+
+- **ONLYOFFICE Docs** node for interacting with ONLYOFFICE Document Server API
+- JWT-based authentication with configurable header and secret
+- Document conversion operations:
+  - Convert documents between 50+ formats (DOCX, XLSX, PPTX, PDF, CSV, etc.)
+  - Convert to PDF with quick and advanced spreadsheet options
+  - Generate thumbnail images with custom dimensions
+  - Remove password protection from documents
+  - Add watermarks to PDF documents
+- Advanced features including layout options, watermark customization, and error handling
+
+<!-- Definitions -->
+
+[Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
+[Semantic Versioning]: https://semver.org/spec/v2.0.0.html
+
+<!-- Definitions: Tags -->
+
+[Unreleased]: https://github.com/ONLYOFFICE/onlyoffice-n8n/compare/v0.1.0...HEAD/
+[0.1.0]: https://github.com/ONLYOFFICE/onlyoffice-n8n/releases/tag/v0.1.0
+
+<!-- Definitions: Commits -->
