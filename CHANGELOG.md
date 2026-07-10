@@ -5,6 +5,10 @@ Changelog] format and adhering to [Semantic Versioning].
 
 ## [Unreleased]
 
+There are no noticeable changes in version [unreleased].
+
+## [0.0.2] - 2026-07-10
+
 ### Added
 
 - **Document Builder** resource for interacting with the ONLYOFFICE Docs web DocBuilder service
@@ -34,7 +38,8 @@ Changelog] format and adhering to [Semantic Versioning].
 
 <!-- Definitions: Tags -->
 
-[Unreleased]: https://github.com/ONLYOFFICE/onlyoffice-n8n/compare/v0.0.1...HEAD/
+[Unreleased]: https://github.com/ONLYOFFICE/onlyoffice-n8n/compare/v0.0.2...HEAD/
+[0.0.2]: https://github.com/ONLYOFFICE/onlyoffice-n8n/compare/v0.0.1...v0.0.2/
 [0.0.1]: https://github.com/ONLYOFFICE/onlyoffice-n8n/releases/tag/v0.0.1
 
 <!-- Definitions: Commits -->
