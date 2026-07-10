@@ -9,6 +9,10 @@ This is an n8n community node that lets you use [ONLYOFFICE Document Server] in 
 
 [n8n] is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
 
+## Prerequisites
+
+- **ONLYOFFICE Docs v10.0 or later** is required.
+
 ## Installation
 
 Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes/installation/) in the n8n community nodes documentation.
