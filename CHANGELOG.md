@@ -11,7 +11,7 @@ There are no noticeable changes in version [unreleased].
 
 ### Added
 
-- **Document Builder** resource for interacting with the ONLYOFFICE Docs web DocBuilder service
+- **Document Builder** resource for interacting with the ONLYOFFICE Docs web DocBuilder service (Document Server 10.0 required)
 - Document Builder operations:
   - Extract from existing documents
   - Generate new documents
