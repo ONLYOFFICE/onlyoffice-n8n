@@ -5,7 +5,7 @@
 
 This is an n8n community node that lets you use [ONLYOFFICE Document Server] in your n8n workflows.
 
-ONLYOFFICE Document Server is a powerful document processing and conversion platform that allows you to work with office documents in various formats.
+[ONLYOFFICE Document Server] is a powerful document processing and conversion platform that allows you to work with office documents in various formats. The node integrates with both the [conversion API] and the web [DocBuilder] service.
 
 [n8n] is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
 
@@ -45,15 +45,37 @@ This package provides the following nodes:
 
 ## Operations
 
-The ONLYOFFICE Docs node supports the following operations:
+The ONLYOFFICE Docs node supports the following resources and operations:
 
-### Document conversion operations
+### Conversion
 - Convert a document
 - Convert to PDF
 - Convert spreadsheet to PDF
 - Generate thumbnail
 - Remove password
 - Add watermark
+
+### Document Builder
+**Extract from existing documents:**
+- Extract Text
+- Extract Outline
+- Extract Tables
+- Extract Chunks
+- Extract Metadata
+
+**Generate new documents:**
+- Create Document
+- JSON to Table
+- Generate Spreadsheet
+- Generate Presentation
+- Markdown to Document
+
+**Modify existing documents:**
+- Fill Template
+- Mail Merge
+- Append Content to Document
+- Append Rows to Spreadsheet
+- Update Row in Spreadsheet
 
 ### Supported formats
 The node supports conversion between 50+ formats including:
@@ -73,6 +95,57 @@ This node supports JWT-based authentication:
 | **JWT Header**            | HTTP header for JWT token (default: `Authorization`)                  |
 
 ## Operation Details
+
+### Document Builder
+
+Document Builder operations use the ONLYOFFICE Docs `/docbuilder` web service endpoint. All operations return `fileName`, `outputUrl`, and binary file data (where applicable) so results can be passed directly between nodes in a workflow.
+
+#### Extract Text
+Extracts all paragraphs and tables from a DOCX as structured JSON. Returns `paragraphs[]` and `tables[]` arrays.
+
+#### Extract Outline
+Extracts the document heading structure. Returns one item per heading with `level` (1–6) and `text` fields.
+
+#### Extract Tables
+Extracts all tables from a document as JSON. Each item has `tableIndex`, `headers[]`, `rows[][]`, and `records[]`. Use `{{ $json.records }}` as input for **Generate Spreadsheet**, **Append Rows**, or **JSON to Table**.
+
+#### Extract Chunks
+Splits a document into text chunks for vectorization or AI embedding pipelines. The **Chunk By** option controls granularity: by paragraphs or by headings sections. Each output item has `text` and `metadata`.
+
+#### Extract Metadata
+Returns document statistics in a single item: `paragraphs`, `headings`, `tables`, `estimatedWords`, `characters`.
+
+#### Create Document
+Creates a new DOCX or PDF from plain text. Each line of the **Text** field becomes a separate paragraph. Optionally set a document title.
+
+#### JSON to Table
+Creates a DOCX or PDF with a formatted table from a JSON array. Object keys become column headers. Supports an optional table title.
+
+#### Generate Spreadsheet
+Creates an XLSX spreadsheet from a JSON array of row objects. Object keys become column headers in row 1.
+
+#### Generate Presentation
+Creates a PPTX presentation from a JSON array of slide objects. Each slide supports `title`, `body`, `background`, font colors, sizes, and alignment.
+
+#### Markdown to Document
+Converts Markdown to a formatted DOCX or PDF. Supports headings (H1–H6), bold, italic, inline code, bullet lists, numbered lists, and fenced code blocks.
+
+#### Fill Template
+Opens a document and replaces `{{key}}` placeholders with values from the **Template Data** JSON object. Preserves the original document formatting.
+
+#### Mail Merge
+Runs **Fill Template** for each record in a JSON array. Returns one output item per generated document, each with `fileName`, `outputUrl`, and binary data.
+
+#### Append Content to Document
+Adds paragraphs to the end of an existing document. Each array item can be a plain string or an object with `text` and `bold` fields.
+
+#### Append Rows to Spreadsheet
+Adds rows to an existing XLSX file. Object keys in the JSON array must match existing column headers exactly.
+
+#### Update Row in Spreadsheet
+Finds all rows where a given column equals a search value, then updates specified cell values. Column names must match headers exactly.
+
+---
 
 ### Convert Document
 Converts files between different formats with comprehensive format support.
@@ -138,6 +211,8 @@ See [CHANGELOG.md] for version history and release notes.
 
 [n8n]: https://n8n.io/
 [ONLYOFFICE Document Server]: https://www.onlyoffice.com/docs
+[conversion API]: https://api.onlyoffice.com/docs/docs-api/additional-api/conversion-api/
+[DocBuilder]: https://api.onlyoffice.com/docs/docs-api/additional-api/document-builder-api/
 [n8n Dockerfile]: https://github.com/n8n-io/n8n/blob/master/docker/images/n8n/Dockerfile
 [LICENSE]: https://github.com/onlyoffice/onlyoffice-n8n/blob/master/LICENSE
 [CHANGELOG.md]: https://github.com/onlyoffice/onlyoffice-n8n/blob/master/CHANGELOG.md

@@ -5,7 +5,13 @@ Changelog] format and adhering to [Semantic Versioning].
 
 ## [Unreleased]
 
-There are no noticeable changes in version [unreleased].
+### Added
+
+- **Document Builder** resource for interacting with the ONLYOFFICE Docs web DocBuilder service
+- Document Builder operations:
+  - Extract from existing documents
+  - Generate new documents
+  - Modify existing documents
 
 ## [0.1.0] - 2026-06-18
 
