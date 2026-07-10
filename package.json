@@ -1,6 +1,6 @@
 {
   "name": "@onlyoffice/n8n-nodes-docs",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "n8n nodes for ONLYOFFICE Document Server (Docs)",
   "license": "MIT",
   "homepage": "https://github.com/ONLYOFFICE/onlyoffice-n8n/",
