@@ -1263,7 +1263,8 @@ export class OnlyofficeDocs implements INodeType {
 					const parts: Buffer[] = [];
 
 					if (jwtSecret) {
-						const token = signJwt(fromFileParams, jwtSecret);
+						// The from-file endpoint accepts only tokens with the operation claim.
+						const token = signJwt({ ...fromFileParams, operation: 'converter' }, jwtSecret);
 						parts.push(Buffer.from(
 							`--${boundary}\r\nContent-Disposition: form-data; name="token"\r\n\r\n${token}\r\n`,
 						));
