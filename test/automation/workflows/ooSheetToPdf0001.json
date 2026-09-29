@@ -1,0 +1,60 @@
+{
+	"id": "ooSheetToPdf0001",
+	"name": "ONLYOFFICE Docs test: Spreadsheet to PDF",
+	"active": false,
+	"settings": {
+		"executionOrder": "v1"
+	},
+	"nodes": [
+		{
+			"id": "00000000-0000-4000-8000-000000000001",
+			"name": "Start",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [0, 0],
+			"parameters": {}
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000002",
+			"position": [260, 0],
+			"name": "Spreadsheet to PDF",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "conversion",
+				"operation": "spreadsheetToPdf",
+				"fileUrl": "={{ $env.FIXTURES_URL }}sample.xlsx",
+				"inputFormat": "xlsx",
+				"orientation": "landscape",
+				"spreadsheetOptions": {
+					"gridLines": true,
+					"headings": true,
+					"scale": 90,
+					"marginTop": "10mm"
+				}
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		}
+	],
+	"connections": {
+		"Start": {
+			"main": [
+				[
+					{
+						"node": "Spreadsheet to PDF",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"pinData": {},
+	"tags": []
+}

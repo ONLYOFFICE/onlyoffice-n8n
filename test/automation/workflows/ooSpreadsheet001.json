@@ -1,0 +1,150 @@
+{
+	"id": "ooSpreadsheet001",
+	"name": "ONLYOFFICE Docs test: Spreadsheet operations",
+	"active": false,
+	"settings": {
+		"executionOrder": "v1"
+	},
+	"nodes": [
+		{
+			"id": "00000000-0000-4000-8000-000000000001",
+			"name": "Start",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [0, 0],
+			"parameters": {}
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000002",
+			"position": [260, 0],
+			"name": "Generate Spreadsheet",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "generateSpreadsheet",
+				"builderTableTitle": "People",
+				"builderTableData": "[{\"Name\":\"Alice\",\"Status\":\"Open\"},{\"Name\":\"Bob\",\"Status\":\"Open\"}]"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000003",
+			"position": [520, 0],
+			"name": "Append Rows",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "appendRows",
+				"builderFileUrl": "={{ $json.outputUrl }}",
+				"builderTableData": "[{\"Name\":\"Carol\",\"Status\":\"New\"}]"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000004",
+			"position": [780, 0],
+			"name": "Update Row",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "updateRow",
+				"builderFileUrl": "={{ $json.outputUrl }}",
+				"builderSearchColumn": "Name",
+				"builderSearchValue": "Bob",
+				"builderUpdates": "{\"Status\":\"Done\"}"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000005",
+			"position": [1040, 0],
+			"name": "Spreadsheet to CSV",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "conversion",
+				"operation": "convert",
+				"fileUrl": "={{ $json.outputUrl }}",
+				"inputFormat": "xlsx",
+				"outputFormat": "csv",
+				"outputMode": "urlOnly"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		}
+	],
+	"connections": {
+		"Start": {
+			"main": [
+				[
+					{
+						"node": "Generate Spreadsheet",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Generate Spreadsheet": {
+			"main": [
+				[
+					{
+						"node": "Append Rows",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Append Rows": {
+			"main": [
+				[
+					{
+						"node": "Update Row",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Update Row": {
+			"main": [
+				[
+					{
+						"node": "Spreadsheet to CSV",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"pinData": {},
+	"tags": []
+}

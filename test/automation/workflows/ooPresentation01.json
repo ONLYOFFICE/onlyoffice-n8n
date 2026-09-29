@@ -1,0 +1,85 @@
+{
+	"id": "ooPresentation01",
+	"name": "ONLYOFFICE Docs test: Generate Presentation",
+	"active": false,
+	"settings": {
+		"executionOrder": "v1"
+	},
+	"nodes": [
+		{
+			"id": "00000000-0000-4000-8000-000000000001",
+			"name": "Start",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [0, 0],
+			"parameters": {}
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000002",
+			"position": [260, 0],
+			"name": "Generate Presentation",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "generatePresentation",
+				"builderSlidesData": "[{\"title\":\"Slide 1\",\"body\":\"Content\",\"background\":\"#1a73e8\",\"titleColor\":\"#FFFFFF\"},{\"title\":\"Slide 2\",\"body\":\"More\"}]"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000003",
+			"position": [520, 0],
+			"name": "Presentation Thumbnails",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "conversion",
+				"operation": "thumbnail",
+				"fileUrl": "={{ $json.outputUrl }}",
+				"inputFormat": "pptx",
+				"thumbnailFirst": false,
+				"outputMode": "urlOnly"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		}
+	],
+	"connections": {
+		"Start": {
+			"main": [
+				[
+					{
+						"node": "Generate Presentation",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Generate Presentation": {
+			"main": [
+				[
+					{
+						"node": "Presentation Thumbnails",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"pinData": {},
+	"tags": []
+}

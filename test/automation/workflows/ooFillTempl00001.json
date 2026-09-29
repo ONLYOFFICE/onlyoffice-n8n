@@ -1,0 +1,83 @@
+{
+	"id": "ooFillTempl00001",
+	"name": "ONLYOFFICE Docs test: Fill Template",
+	"active": false,
+	"settings": {
+		"executionOrder": "v1"
+	},
+	"nodes": [
+		{
+			"id": "00000000-0000-4000-8000-000000000001",
+			"name": "Start",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [0, 0],
+			"parameters": {}
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000002",
+			"position": [260, 0],
+			"name": "Fill Template",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "fillTemplate",
+				"builderFileUrl": "={{ $env.FIXTURES_URL }}template.docx",
+				"builderTemplateData": "{\"name\":\"Alice\",\"date\":\"2026-01-01\",\"role\":\"Manager\"}"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000003",
+			"position": [520, 0],
+			"name": "Extract Filled Text",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "extractText",
+				"builderFileUrl": "={{ $json.outputUrl }}"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		}
+	],
+	"connections": {
+		"Start": {
+			"main": [
+				[
+					{
+						"node": "Fill Template",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Fill Template": {
+			"main": [
+				[
+					{
+						"node": "Extract Filled Text",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"pinData": {},
+	"tags": []
+}
