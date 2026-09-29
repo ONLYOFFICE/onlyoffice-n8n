@@ -9,6 +9,9 @@
     "email": "integration@onlyoffice.com",
     "url": "https://onlyoffice.com/"
   },
+  "maintainers": [
+    "Ascensio System SIA <integration@onlyoffice.com> (https://www.onlyoffice.com)"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/ONLYOFFICE/onlyoffice-n8n"
