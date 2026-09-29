@@ -52,11 +52,10 @@ export function escapeJs(str: string): string {
  * Replace %%PLACEHOLDER%% markers in a script template with the given values.
  */
 export function buildScript(template: string, replacements: Record<string, string>): string {
-	let script = template;
-	for (const [key, value] of Object.entries(replacements)) {
-		script = script.split(`%%${key}%%`).join(value);
-	}
-	return script;
+	// One pass, so markers inside the inserted values stay as they are.
+	return template.replace(/%%([A-Z_]+)%%/g, (marker, key: string) =>
+		key in replacements ? replacements[key] : marker,
+	);
 }
 
 /**
