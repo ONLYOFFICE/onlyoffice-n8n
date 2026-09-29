@@ -325,8 +325,8 @@ export async function executeDocBuilder(
 
 	// Generation operations: return single item (with or without binary)
 	if (!isExtract) {
-		const outputFileName = this.getNodeParameter('builderOutputFileName', itemIndex) as string;
-		const binaryPropertyName = this.getNodeParameter('builderBinaryPropertyName', itemIndex) as string;
+		const outputFileName = this.getNodeParameter('builderOutputFileName', itemIndex, 'output') as string;
+		const binaryPropertyName = this.getNodeParameter('builderBinaryPropertyName', itemIndex, 'data') as string;
 		const fileName = `${outputFileName}.${outputExtension}`;
 		if (outputMode === 'urlOnly') {
 			return [{ json: { fileName, operation, outputUrl: firstOutputUrl } }];
@@ -390,8 +390,8 @@ export async function executeMailMerge(
 	const fileUrl = this.getNodeParameter('builderFileUrl', itemIndex) as string;
 	const records = this.getNodeParameter('builderRecords', itemIndex) as IDataObject[];
 	const outputFormat = this.getNodeParameter('builderOutputFormat', itemIndex) as string;
-	const outputFileName = this.getNodeParameter('builderOutputFileName', itemIndex) as string;
-	const binaryPropertyName = this.getNodeParameter('builderBinaryPropertyName', itemIndex) as string;
+	const outputFileName = this.getNodeParameter('builderOutputFileName', itemIndex, 'output') as string;
+	const binaryPropertyName = this.getNodeParameter('builderBinaryPropertyName', itemIndex, 'data') as string;
 	const outputMode = this.getNodeParameter('builderOutputMode', itemIndex, 'data') as string;
 
 	const results: INodeExecutionData[] = [];
