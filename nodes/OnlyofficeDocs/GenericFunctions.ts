@@ -1,5 +1,5 @@
 import { createHmac } from 'crypto';
-import { NodeOperationError, sleep } from 'n8n-workflow';
+import { jsonParse, NodeOperationError, sleep } from 'n8n-workflow';
 import type {
 	IDataObject,
 	IExecuteFunctions,
@@ -388,7 +388,8 @@ export async function executeMailMerge(
 	jwtHeader: string,
 ): Promise<INodeExecutionData[]> {
 	const fileUrl = this.getNodeParameter('builderFileUrl', itemIndex) as string;
-	const records = this.getNodeParameter('builderRecords', itemIndex) as IDataObject[];
+	const recordsParam = this.getNodeParameter('builderRecords', itemIndex) as string | IDataObject[];
+	const records = typeof recordsParam === 'string' ? jsonParse<IDataObject[]>(recordsParam) : recordsParam;
 	const outputFormat = this.getNodeParameter('builderOutputFormat', itemIndex) as string;
 	const outputFileName = this.getNodeParameter('builderOutputFileName', itemIndex, 'output') as string;
 	const binaryPropertyName = this.getNodeParameter('builderBinaryPropertyName', itemIndex, 'data') as string;
