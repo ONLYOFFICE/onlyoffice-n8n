@@ -1184,11 +1184,13 @@ export class OnlyofficeDocs implements INodeType {
 						const opacity = (wmOpts.opacity as number) ?? 0.3;
 						const bold = wmOpts.bold !== undefined ? (wmOpts.bold as boolean) : true;
 						const diagonal = wmOpts.diagonal !== undefined ? (wmOpts.diagonal as boolean) : true;
-						const fontColor = (wmOpts.fontColor as string) || '#C0C0C0';
+						const fontColor = /^#[0-9a-f]{6}$/i.test(String(wmOpts.fontColor))
+							? (wmOpts.fontColor as string)
+							: '#C0C0C0';
 
-						const r = parseInt(fontColor.slice(1, 3), 16) || 192;
-						const g = parseInt(fontColor.slice(3, 5), 16) || 192;
-						const b = parseInt(fontColor.slice(5, 7), 16) || 192;
+						const r = parseInt(fontColor.slice(1, 3), 16);
+						const g = parseInt(fontColor.slice(3, 5), 16);
+						const b = parseInt(fontColor.slice(5, 7), 16);
 
 						const watermark: IDataObject = {
 							transparent: opacity,
