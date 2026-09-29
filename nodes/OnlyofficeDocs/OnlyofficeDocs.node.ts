@@ -1308,10 +1308,20 @@ export class OnlyofficeDocs implements INodeType {
 							encoding: 'arraybuffer',
 						});
 
+						const outputFile = Buffer.from(outputFileBuffer as ArrayBuffer);
+						// On failure the server answers with JSON instead of the file.
+						if (outputFile.subarray(0, 9).toString() === '{"error":') {
+							throw new NodeOperationError(
+								this.getNode(),
+								`Conversion failed with error code: ${JSON.parse(outputFile.toString()).error}`,
+								{ itemIndex: i },
+							);
+						}
+
 						const outputFileName = this.getNodeParameter('outputFileName', i) as string;
 						const fullFileName = `${outputFileName}.${actualExtension}`;
 						const resultBinaryData = await this.helpers.prepareBinaryData(
-							Buffer.from(outputFileBuffer as ArrayBuffer),
+							outputFile,
 							fullFileName,
 						);
 						const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i) as string;
