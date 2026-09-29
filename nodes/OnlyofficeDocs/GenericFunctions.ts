@@ -205,7 +205,7 @@ export async function executeDocBuilder(
 			const markdown = this.getNodeParameter('builderMarkdown', itemIndex) as string;
 			const outputFormat = this.getNodeParameter('builderOutputFormat', itemIndex) as string;
 			scriptContent = buildScript(MARKDOWN_TO_DOC, {
-				MARKDOWN_JSON: toJsonLiteral(markdown),
+				MARKDOWN_JSON: JSON.stringify(JSON.stringify(markdown)),
 				OUTPUT_FORMAT: escapeJs(outputFormat),
 			});
 			outputExtension = outputFormat;
