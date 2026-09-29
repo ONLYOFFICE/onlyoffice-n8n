@@ -1119,6 +1119,7 @@ export class OnlyofficeDocs implements INodeType {
 				let fileExtension: string | undefined;
 				const conversionParams: IDataObject = {
 					filetype: inputFormat,
+					key: `n8n_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`,
 				};
 
 				switch (operation) {
@@ -1345,7 +1346,6 @@ export class OnlyofficeDocs implements INodeType {
 						...conversionParams,
 						async: false,
 						url: fileUrl,
-						key: `n8n_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`,
 					};
 
 					const outputFileName = outputMode === 'binary'
@@ -1382,7 +1382,7 @@ export class OnlyofficeDocs implements INodeType {
 				if (!convertedUrl && !conversionResponse.endConvert) {
 					convertedUrl = await pollConversion(
 						this, i, docsServerUrl, jwtSecret, jwtHeader,
-						conversionResponse, outputFormat, inputFormat,
+						conversionParams.key as string, outputFormat, inputFormat,
 					);
 				}
 

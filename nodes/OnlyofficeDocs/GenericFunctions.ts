@@ -77,19 +77,19 @@ export async function pollConversion(
 	docsServerUrl: string,
 	jwtSecret: string,
 	jwtHeader: string,
-	initialResponse: IDataObject,
+	key: string,
 	outputFormat: string,
 	inputFormat: string,
 ): Promise<string> {
-	let response = initialResponse;
-	let convertedUrl = response.fileUrl as string | undefined;
+	let response: IDataObject;
+	let convertedUrl: string | undefined;
 
 	for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS && !convertedUrl; attempt++) {
 		await sleep(POLL_INTERVAL_MS);
 
 		const pollBody: IDataObject = {
 			async: false,
-			key: response.key as string,
+			key,
 			outputtype: outputFormat,
 			filetype: inputFormat,
 		};
