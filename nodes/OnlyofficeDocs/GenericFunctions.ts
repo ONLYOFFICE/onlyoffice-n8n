@@ -1,5 +1,5 @@
 import { createHmac } from 'crypto';
-import { NodeOperationError, sleep } from 'n8n-workflow';
+import { jsonParse, NodeOperationError, sleep } from 'n8n-workflow';
 import type {
 	IDataObject,
 	IExecuteFunctions,
@@ -52,11 +52,10 @@ export function escapeJs(str: string): string {
  * Replace %%PLACEHOLDER%% markers in a script template with the given values.
  */
 export function buildScript(template: string, replacements: Record<string, string>): string {
-	let script = template;
-	for (const [key, value] of Object.entries(replacements)) {
-		script = script.split(`%%${key}%%`).join(value);
-	}
-	return script;
+	// One pass, so markers inside the inserted values stay as they are.
+	return template.replace(/%%([A-Z_]+)%%/g, (marker, key: string) =>
+		key in replacements ? replacements[key] : marker,
+	);
 }
 
 /**
@@ -77,19 +76,19 @@ export async function pollConversion(
 	docsServerUrl: string,
 	jwtSecret: string,
 	jwtHeader: string,
-	initialResponse: IDataObject,
+	key: string,
 	outputFormat: string,
 	inputFormat: string,
 ): Promise<string> {
-	let response = initialResponse;
-	let convertedUrl = response.fileUrl as string | undefined;
+	let response: IDataObject;
+	let convertedUrl: string | undefined;
 
 	for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS && !convertedUrl; attempt++) {
 		await sleep(POLL_INTERVAL_MS);
 
 		const pollBody: IDataObject = {
 			async: false,
-			key: response.key as string,
+			key,
 			outputtype: outputFormat,
 			filetype: inputFormat,
 		};
@@ -205,7 +204,7 @@ export async function executeDocBuilder(
 			const markdown = this.getNodeParameter('builderMarkdown', itemIndex) as string;
 			const outputFormat = this.getNodeParameter('builderOutputFormat', itemIndex) as string;
 			scriptContent = buildScript(MARKDOWN_TO_DOC, {
-				MARKDOWN_JSON: toJsonLiteral(markdown),
+				MARKDOWN_JSON: JSON.stringify(JSON.stringify(markdown)),
 				OUTPUT_FORMAT: escapeJs(outputFormat),
 			});
 			outputExtension = outputFormat;
@@ -325,8 +324,8 @@ export async function executeDocBuilder(
 
 	// Generation operations: return single item (with or without binary)
 	if (!isExtract) {
-		const outputFileName = this.getNodeParameter('builderOutputFileName', itemIndex) as string;
-		const binaryPropertyName = this.getNodeParameter('builderBinaryPropertyName', itemIndex) as string;
+		const outputFileName = this.getNodeParameter('builderOutputFileName', itemIndex, 'output') as string;
+		const binaryPropertyName = this.getNodeParameter('builderBinaryPropertyName', itemIndex, 'data') as string;
 		const fileName = `${outputFileName}.${outputExtension}`;
 		if (outputMode === 'urlOnly') {
 			return [{ json: { fileName, operation, outputUrl: firstOutputUrl } }];
@@ -388,10 +387,11 @@ export async function executeMailMerge(
 	jwtHeader: string,
 ): Promise<INodeExecutionData[]> {
 	const fileUrl = this.getNodeParameter('builderFileUrl', itemIndex) as string;
-	const records = this.getNodeParameter('builderRecords', itemIndex) as IDataObject[];
+	const recordsParam = this.getNodeParameter('builderRecords', itemIndex) as string | IDataObject[];
+	const records = typeof recordsParam === 'string' ? jsonParse<IDataObject[]>(recordsParam) : recordsParam;
 	const outputFormat = this.getNodeParameter('builderOutputFormat', itemIndex) as string;
-	const outputFileName = this.getNodeParameter('builderOutputFileName', itemIndex) as string;
-	const binaryPropertyName = this.getNodeParameter('builderBinaryPropertyName', itemIndex) as string;
+	const outputFileName = this.getNodeParameter('builderOutputFileName', itemIndex, 'output') as string;
+	const binaryPropertyName = this.getNodeParameter('builderBinaryPropertyName', itemIndex, 'data') as string;
 	const outputMode = this.getNodeParameter('builderOutputMode', itemIndex, 'data') as string;
 
 	const results: INodeExecutionData[] = [];

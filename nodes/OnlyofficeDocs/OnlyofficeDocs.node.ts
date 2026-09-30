@@ -1119,6 +1119,7 @@ export class OnlyofficeDocs implements INodeType {
 				let fileExtension: string | undefined;
 				const conversionParams: IDataObject = {
 					filetype: inputFormat,
+					key: `n8n_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`,
 				};
 
 				switch (operation) {
@@ -1183,11 +1184,13 @@ export class OnlyofficeDocs implements INodeType {
 						const opacity = (wmOpts.opacity as number) ?? 0.3;
 						const bold = wmOpts.bold !== undefined ? (wmOpts.bold as boolean) : true;
 						const diagonal = wmOpts.diagonal !== undefined ? (wmOpts.diagonal as boolean) : true;
-						const fontColor = (wmOpts.fontColor as string) || '#C0C0C0';
+						const fontColor = /^#[0-9a-f]{6}$/i.test(String(wmOpts.fontColor))
+							? (wmOpts.fontColor as string)
+							: '#C0C0C0';
 
-						const r = parseInt(fontColor.slice(1, 3), 16) || 192;
-						const g = parseInt(fontColor.slice(3, 5), 16) || 192;
-						const b = parseInt(fontColor.slice(5, 7), 16) || 192;
+						const r = parseInt(fontColor.slice(1, 3), 16);
+						const g = parseInt(fontColor.slice(3, 5), 16);
+						const b = parseInt(fontColor.slice(5, 7), 16);
 
 						const watermark: IDataObject = {
 							transparent: opacity,
@@ -1263,7 +1266,8 @@ export class OnlyofficeDocs implements INodeType {
 					const parts: Buffer[] = [];
 
 					if (jwtSecret) {
-						const token = signJwt(fromFileParams, jwtSecret);
+						// The from-file endpoint accepts only tokens with the operation claim.
+						const token = signJwt({ ...fromFileParams, operation: 'converter' }, jwtSecret);
 						parts.push(Buffer.from(
 							`--${boundary}\r\nContent-Disposition: form-data; name="token"\r\n\r\n${token}\r\n`,
 						));
@@ -1307,10 +1311,20 @@ export class OnlyofficeDocs implements INodeType {
 							encoding: 'arraybuffer',
 						});
 
+						const outputFile = Buffer.from(outputFileBuffer as ArrayBuffer);
+						// On failure the server answers with JSON instead of the file.
+						if (outputFile.subarray(0, 9).toString() === '{"error":') {
+							throw new NodeOperationError(
+								this.getNode(),
+								`Conversion failed with error code: ${JSON.parse(outputFile.toString()).error}`,
+								{ itemIndex: i },
+							);
+						}
+
 						const outputFileName = this.getNodeParameter('outputFileName', i) as string;
 						const fullFileName = `${outputFileName}.${actualExtension}`;
 						const resultBinaryData = await this.helpers.prepareBinaryData(
-							Buffer.from(outputFileBuffer as ArrayBuffer),
+							outputFile,
 							fullFileName,
 						);
 						const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i) as string;
@@ -1334,7 +1348,6 @@ export class OnlyofficeDocs implements INodeType {
 						...conversionParams,
 						async: false,
 						url: fileUrl,
-						key: `n8n_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`,
 					};
 
 					const outputFileName = outputMode === 'binary'
@@ -1371,7 +1384,7 @@ export class OnlyofficeDocs implements INodeType {
 				if (!convertedUrl && !conversionResponse.endConvert) {
 					convertedUrl = await pollConversion(
 						this, i, docsServerUrl, jwtSecret, jwtHeader,
-						conversionResponse, outputFormat, inputFormat,
+						conversionParams.key as string, outputFormat, inputFormat,
 					);
 				}
 
