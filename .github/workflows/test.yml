@@ -5,10 +5,22 @@ on:
     branches:
       - master
       - develop
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.github/**'
+      - '.check-licenses.yml'
   push:
     branches:
       - master
       - develop
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.github/**'
+      - '.check-licenses.yml'
   workflow_dispatch:
 
 jobs:
