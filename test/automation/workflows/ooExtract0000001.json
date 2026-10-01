@@ -1,0 +1,174 @@
+{
+	"id": "ooExtract0000001",
+	"name": "ONLYOFFICE Docs test: Document Builder extract",
+	"active": false,
+	"settings": {
+		"executionOrder": "v1"
+	},
+	"nodes": [
+		{
+			"id": "00000000-0000-4000-8000-000000000001",
+			"name": "Start",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [0, 0],
+			"parameters": {}
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000002",
+			"position": [260, 0],
+			"name": "Extract Text",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "extractText",
+				"builderFileUrl": "={{ $env.FIXTURES_URL }}sample.docx"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000003",
+			"position": [260, 200],
+			"name": "Extract Outline",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "extractOutline",
+				"builderFileUrl": "={{ $env.FIXTURES_URL }}sample.docx"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000004",
+			"position": [260, 400],
+			"name": "Extract Tables",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "extractTables",
+				"builderFileUrl": "={{ $env.FIXTURES_URL }}sample.docx"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000005",
+			"position": [260, 600],
+			"name": "Chunks By Headings",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "extractChunks",
+				"builderFileUrl": "={{ $env.FIXTURES_URL }}sample.docx",
+				"builderChunkBy": "headings"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000006",
+			"position": [260, 800],
+			"name": "Chunks By Paragraphs",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "extractChunks",
+				"builderFileUrl": "={{ $env.FIXTURES_URL }}sample.docx",
+				"builderChunkBy": "paragraphs"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000007",
+			"position": [260, 1000],
+			"name": "Extract Metadata",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "extractMetadata",
+				"builderFileUrl": "={{ $env.FIXTURES_URL }}sample.docx"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		}
+	],
+	"connections": {
+		"Start": {
+			"main": [
+				[
+					{
+						"node": "Extract Text",
+						"type": "main",
+						"index": 0
+					},
+					{
+						"node": "Extract Outline",
+						"type": "main",
+						"index": 0
+					},
+					{
+						"node": "Extract Tables",
+						"type": "main",
+						"index": 0
+					},
+					{
+						"node": "Chunks By Headings",
+						"type": "main",
+						"index": 0
+					},
+					{
+						"node": "Chunks By Paragraphs",
+						"type": "main",
+						"index": 0
+					},
+					{
+						"node": "Extract Metadata",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"pinData": {},
+	"tags": []
+}

@@ -1,0 +1,109 @@
+{
+	"id": "ooMailMerge00001",
+	"name": "ONLYOFFICE Docs test: Mail Merge",
+	"active": false,
+	"settings": {
+		"executionOrder": "v1"
+	},
+	"nodes": [
+		{
+			"id": "00000000-0000-4000-8000-000000000001",
+			"name": "Start",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [0, 0],
+			"parameters": {}
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000002",
+			"position": [260, 0],
+			"name": "Mail Merge",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "mailMerge",
+				"builderFileUrl": "={{ $env.FIXTURES_URL }}template.docx",
+				"builderRecords": "={{ [{ \"name\": \"Alice\", \"date\": \"d1\", \"role\": \"Manager\" }, { \"name\": \"Bob\", \"date\": \"d2\", \"role\": \"Developer\" }] }}",
+				"builderOutputFileName": "letter"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000003",
+			"position": [520, 0],
+			"name": "Extract Merged Text",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "extractText",
+				"builderFileUrl": "={{ $json.outputUrl }}"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000004",
+			"position": [260, 200],
+			"name": "Mail Merge (JSON text)",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "docbuilder",
+				"operation": "mailMerge",
+				"builderFileUrl": "={{ $env.FIXTURES_URL }}template.docx",
+				"builderRecords": "[{\"name\":\"Carol\",\"date\":\"d3\",\"role\":\"Tester\"}]"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		}
+	],
+	"connections": {
+		"Start": {
+			"main": [
+				[
+					{
+						"node": "Mail Merge",
+						"type": "main",
+						"index": 0
+					},
+					{
+						"node": "Mail Merge (JSON text)",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Mail Merge": {
+			"main": [
+				[
+					{
+						"node": "Extract Merged Text",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"pinData": {},
+	"tags": []
+}
