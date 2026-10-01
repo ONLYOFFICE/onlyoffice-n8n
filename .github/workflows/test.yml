@@ -1,0 +1,52 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - master
+      - develop
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.github/**'
+      - '.check-licenses.yml'
+  push:
+    branches:
+      - master
+      - develop
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.github/**'
+      - '.check-licenses.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # The same setup as test/docker.sh: this container and a Document Server named documentserver.
+    container: node:24-bookworm
+    timeout-minutes: 45
+    services:
+      documentserver:
+        image: onlyoffice/documentserver-de:latest
+        env:
+          JWT_SECRET: automation-secret-0123456789abcdef0123
+          # The Document Server downloads the fixtures from the job container (a private address).
+          ALLOW_PRIVATE_IP_ADDRESS: 'true'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{hashFiles('pnpm-lock.yaml', 'test/run.sh')}}
+
+      - name: Run Tests
+        run: bash test/run.sh
