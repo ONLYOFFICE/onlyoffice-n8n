@@ -40,7 +40,7 @@ jobs:
           ALLOW_PRIVATE_IP_ADDRESS: 'true'
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Cache npm
         uses: actions/cache@v4
