@@ -91,7 +91,7 @@ database error, `-7` input error, `-8` invalid token (secret or header mismatch)
 ## Workflows
 
 - **Bug fix**: trace parameter → `execute` branch (URL × File Data / URL Only, binary) → request → response → output.
-  Fix all four combinations if the code is shared. First a unit test that fails without the fix, then the fix; lint,
+  Fix all three paths if the code is shared. First a unit test that fails without the fix, then the fix; lint,
   `pnpm test`, `### Fixed` entry (`onlyoffice-n8n-docs-development`).
 - **New conversion operation**: operation option (alphabetical, with `action`), parameters scoped by `displayOptions`,
   `getInputFormats` case, `execute` case filling `conversionParams` + `outputFormat`; unit test of the request body,

@@ -15,6 +15,7 @@ Changelog] format and adhering to [Semantic Versioning].
 
 - The credential test reported a wrong JWT secret as a successful connection
 - Binary Input with the URL Only output always failed: `/converter/from-file` returns the file, never a URL, so this output is no longer offered for Binary Input
+- A line break in the MIME type of a Binary Input file no longer adds header lines to the upload
 
 ## [0.0.2] - 2026-07-10
 

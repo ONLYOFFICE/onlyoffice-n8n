@@ -54,10 +54,12 @@ export function multipartBody(
 			Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`),
 		);
 	}
+	// Both come from the input item: a line break would add header lines or parts.
 	const fileName = file.name.replace(/["\r\n]/g, '_');
+	const mimeType = file.mimeType.replace(/[\r\n]/g, '') || 'application/octet-stream';
 	parts.push(
 		Buffer.from(
-			`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${fileName}"\r\nContent-Type: ${file.mimeType}\r\n\r\n`,
+			`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${fileName}"\r\nContent-Type: ${mimeType}\r\n\r\n`,
 		),
 		file.data,
 		Buffer.from(`\r\n--${boundary}--\r\n`),
