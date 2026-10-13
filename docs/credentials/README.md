@@ -47,6 +47,11 @@ To configure this credential, you'll need:
 
 n8n tests the credentials with a conversion request to the Document Server.
 
+ONLYOFFICE Docs 10.0 checks what each token is for
+(`services.CoAuthoring.token.purposeCheck` in `local.json`). The node marks
+every token for the service it calls, so it works with both the default
+`validate` and the `strict` setting.
+
 ### Related resources
 
 Refer to [ONLYOFFICE Docs API: Signature] and [ONLYOFFICE Docs Help Center:

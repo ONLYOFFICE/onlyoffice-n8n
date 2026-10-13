@@ -15,4 +15,10 @@ bash test/docker.sh     # everything in Docker, the same way as CI
   automation tests. CI (`.github/workflows/test.yml`) and `test/docker.sh` both run it.
 
 `DS_IMAGE` selects the Document Server image for `test/docker.sh`, e.g.
-`DS_IMAGE=onlyoffice/documentserver-de:9.4.1`. Fixtures are regenerated with `python test/fixtures/generate.py`.
+`DS_IMAGE=onlyoffice/documentserver-de:10.0.0.1`. Fixtures are regenerated with `python test/fixtures/generate.py`.
+
+Without Docker networks (n8n in WSL, the Document Server in Docker Desktop) set the addresses both sides reach:
+
+```bash
+DS_URL=http://host.docker.internal:8010 FIXTURES_URL=http://host.docker.internal:8099/ pnpm test:automation
+```

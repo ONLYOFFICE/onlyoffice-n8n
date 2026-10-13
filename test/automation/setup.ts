@@ -16,7 +16,7 @@ const FIXTURES = join(ROOT, 'test/fixtures');
 async function documentServerVersion(): Promise<string> {
 	for (let attempt = 0; attempt < 100; attempt++) {
 		try {
-			const token = signJwt({ c: 'version' }, DS_SECRET);
+			const token = signJwt({ c: 'version', operation: 'command' }, DS_SECRET);
 			const response = await fetch(`${DS_URL}/command`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -32,7 +32,10 @@ async function documentServerVersion(): Promise<string> {
 	throw new Error(`Document Server at ${DS_URL} is not ready`);
 }
 
-/** Serve test/fixtures on this machine's address, where the Document Server can reach them. */
+/**
+ * Serve test/fixtures on this machine's address, where the Document Server can reach them.
+ * FIXTURES_URL overrides the address, e.g. when the Document Server runs in Docker Desktop.
+ */
 function serveFixtures() {
 	const ip = Object.values(networkInterfaces())
 		.flat()
@@ -43,8 +46,10 @@ function serveFixtures() {
 		} catch {
 			response.writeHead(404).end();
 		}
-	}).listen(8099);
-	return { server, url: `http://${ip}:8099/` };
+	});
+	// IPv4: WSL forwards only IPv4 listeners to Windows, where Docker Desktop reaches them.
+	server.listen(8099, '0.0.0.0');
+	return { server, url: process.env.FIXTURES_URL ?? `http://${ip}:8099/` };
 }
 
 export default async function setup(project: TestProject) {

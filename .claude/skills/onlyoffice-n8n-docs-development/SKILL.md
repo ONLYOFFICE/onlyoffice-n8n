@@ -72,9 +72,9 @@ with `ERR_PNPM_IGNORED_BUILDS`). Not `pnpm dev` (separate n8n instance with a sc
 | Part                               | What                                                                                                                                                                                                                                                                                                                                            |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `test/unit/*.test.ts`              | The node with a fake n8n context and fake Document Server responses                                                                                                                                                                                                                                                                             |
-| `test/unit/helpers.ts`             | `runNode({ params, http, items?, credentials?, continueOnFail? })` → `{ output, requests }`; parameter defaults come from the node description with `displayOptions`, so reading a hidden parameter fails like in n8n. `callsOf(script, method)` runs a DocBuilder script on recording stubs and returns the arguments of the calls to `method` |
+| `test/unit/helpers.ts`             | `runNode({ params, http, items?, credentials?, continueOnFail? })` → `{ output, requests }`; parameter defaults come from the node description with `displayOptions`, so reading a hidden parameter fails like in n8n. `formPartsOf(request)` splits a multipart body into its fields and file. `callsOf(script, method)` runs a DocBuilder script on recording stubs and returns the arguments of the calls to `method` |
 | `test/automation/workflows/*.json` | One workflow per operation: Manual Trigger → node type `@onlyoffice/n8n-nodes-docs.onlyofficeDocs` (credential `ooDocsTestCred01`, `onError: continueRegularOutput`), follow-up Extract/Convert steps to check results; file URLs `={{ $env.FIXTURES_URL }}<file>`                                                                              |
-| `test/automation/setup.ts`         | Waits for the DS, serves `test/fixtures` on port 8099, `pnpm pack` → `npm install` into a temp n8n folder, imports the credential and workflows                                                                                                                                                                                                 |
+| `test/automation/setup.ts`         | Waits for the DS (`/command` version), serves `test/fixtures` on `0.0.0.0:8099` (`FIXTURES_URL` overrides the address given to the DS), `pnpm pack` → `npm install` into a temp n8n folder, imports the credential and workflows |
 | `test/automation/n8n.ts`           | `runWorkflow(id)` (`n8n execute`, cached per test file) → `items/json/file(node)`, `download`, `startsWith`, `texts`                                                                                                                                                                                                                            |
 | `test/run.sh`                      | Installs pnpm (`mise.toml`) and n8n 2.40.7, `pnpm test`, `pnpm build`, `pnpm test:automation`                                                                                                                                                                                                                                                   |
 | `test/docker.sh`                   | Runs `run.sh` locally like CI: DS (`DS_IMAGE`, default `documentserver-de:latest`) as `documentserver` + `node:24`                                                                                                                                                                                                                              |
@@ -90,6 +90,10 @@ with `ERR_PNPM_IGNORED_BUILDS`). Not `pnpm dev` (separate n8n instance with a sc
 - Automation pitfalls: vitest sets `NODE_ENV=test`, and the n8n CLI then silently does nothing (setup passes
   `production`); `n8n execute` output is cut off in a pipe (it goes to a file); n8n stores binaries in
   `.n8n/storage` (`file()` reads them); `n8n execute` prints run data only at log level `info`.
+- Docs 10 compatibility: run the automation tests against a 10.x Document Server with the default
+  `token.purposeCheck: validate` and once with `strict` (set in `local.json`, then `supervisorctl restart all`). A
+  refused token shows in the DocService log as
+  `checkJwt purpose rejected: purpose=… reason=…`.
 
 ## Manual run
 
@@ -101,8 +105,10 @@ Document Server happen only after the user confirms. Manual run in the user's WS
 - n8n runs with `N8N_DEV_RELOAD=true`, `NODE_ENV=development`, `N8N_SECURE_COOKIE=false` plus `pnpm exec tsc --watch`
   in the repo. Log `Hot reload triggered for CUSTOM` = reloaded; description changes may need a page refresh,
   svg/json changes a restart. Node type: `CUSTOM.onlyofficeDocs` (+ `CUSTOM.onlyofficeDocsTool`).
-- The Document Server must reach file URLs (use the WSL IP `hostname -I`, not localhost) and n8n must reach the DS
-  public host for downloads.
+- With the Document Server in Docker Desktop and n8n in WSL both sides reach `host.docker.internal` (WSL takes it
+  from the Windows hosts file): use it for the DS URL and for file URLs served from WSL. Servers in WSL must listen
+  on IPv4 (`0.0.0.0`) — WSL forwards only IPv4 listeners. The WSL IP itself is not reachable from Docker Desktop, and
+  the DS must reach its own result URLs, which carry the host n8n called it by.
 - Check per touched operation: URL and binary source, File Data and URL Only, one error case with and without
   "Continue On Fail", two input items. Open the result file — a non-empty binary is not enough.
 
@@ -134,7 +140,7 @@ Report in the PR which operations were run manually and against which Docs versi
 
 1. Correctness: Conversion/DocBuilder fields match the API docs; body fields added before `signJwt`; optional
    collection fields sent only when set, falsy-but-valid values (`0`, `false`, `00`) kept; all four conversion paths
-   (URL/binary × File Data/URL Only) still work.
+   (URL/binary × File Data/URL Only) still work; every token carries the `operation` claim of its endpoint.
 2. Script safety: user data enters DocBuilder scripts only through `escapeJs` / `toJsonLiteral`.
 3. Items: one output per input (or documented), `pairedItem`, `continueOnFail`, `itemIndex` on errors.
 4. Security: no secrets in parameters, output JSON (e.g. Remove Password `password`), error messages; no new outbound

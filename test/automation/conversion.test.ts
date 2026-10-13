@@ -21,6 +21,21 @@ describe('Conversion', () => {
 		expect(startsWith(await download(item.json.convertedUrl as string), '%PDF')).toBe(true);
 	});
 
+	it('Convert to PDF: a binary input is uploaded to /converter/from-file', async () => {
+		const run = await runWorkflow('ooConvertBin0001');
+		expect(run.json('ODT to PDF')[0]).toMatchObject({
+			success: true,
+			fileName: 'from-binary.pdf',
+			inputFormat: 'odt',
+		});
+		expect(startsWith(run.file('ODT to PDF'), '%PDF')).toBe(true);
+	});
+
+	it('Generate Thumbnail: a PNG of a binary input', async () => {
+		const run = await runWorkflow('ooConvertBin0001');
+		expect(startsWith(run.file('ODT Thumbnail'), '\x89PNG')).toBe(true);
+	});
+
 	it('Generate Thumbnail: a PNG of the first page', async () => {
 		const run = await runWorkflow('ooThumbnail00001');
 		expect(startsWith(run.file('First Page PNG'), '\x89PNG')).toBe(true);

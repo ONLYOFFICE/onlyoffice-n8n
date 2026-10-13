@@ -5,7 +5,10 @@ Changelog] format and adhering to [Semantic Versioning].
 
 ## [Unreleased]
 
-There are no noticeable changes in version [unreleased].
+### Changed
+
+- Document Builder operations upload the script to `/docbuilder/from-file` of ONLYOFFICE Docs 10.0
+- Every request token carries the `operation` claim of its endpoint, as ONLYOFFICE Docs 10.0 checks it (`token.purposeCheck`), so the node works with the `strict` setting too
 
 ## [0.0.2] - 2026-07-10
 

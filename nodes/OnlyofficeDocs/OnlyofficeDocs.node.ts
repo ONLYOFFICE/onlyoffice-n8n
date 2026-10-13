@@ -18,7 +18,13 @@ import {
 	getSpreadsheetFormatsConvertibleTo,
 	getThumbnailInputFormats,
 } from './formats';
-import { executeDocBuilder, executeMailMerge, pollConversion, signJwt } from './GenericFunctions';
+import {
+	executeDocBuilder,
+	executeMailMerge,
+	multipartBody,
+	pollConversion,
+	signJwt,
+} from './GenericFunctions';
 
 export class OnlyofficeDocs implements INodeType {
 	description: INodeTypeDescription = {
@@ -1015,7 +1021,7 @@ export class OnlyofficeDocs implements INodeType {
 					url: 'https://example.com/test.docx',
 				};
 
-				const token = signJwt(payload, jwtSecret);
+				const token = signJwt({ ...payload, operation: 'converter' }, jwtSecret);
 				payload.token = token;
 
 				try {
@@ -1089,7 +1095,6 @@ export class OnlyofficeDocs implements INodeType {
 							i,
 							docsServerUrl,
 							jwtSecret,
-							jwtHeader,
 						);
 						for (const r of results) {
 							returnData.push({ ...r, pairedItem: items[i].pairedItem });
@@ -1103,7 +1108,6 @@ export class OnlyofficeDocs implements INodeType {
 						operation,
 						docsServerUrl,
 						jwtSecret,
-						jwtHeader,
 					);
 					for (const r of docResults) {
 						returnData.push({ ...r, pairedItem: items[i].pairedItem });
@@ -1261,29 +1265,12 @@ export class OnlyofficeDocs implements INodeType {
 						...conversionParams,
 						async: outputMode === 'urlOnly',
 					};
-
-					const boundary = `----n8nFormBoundary${Date.now().toString(36)}`;
-					const parts: Buffer[] = [];
-
-					if (jwtSecret) {
-						// The from-file endpoint accepts only tokens with the operation claim.
-						const token = signJwt({ ...fromFileParams, operation: 'converter' }, jwtSecret);
-						parts.push(Buffer.from(
-							`--${boundary}\r\nContent-Disposition: form-data; name="token"\r\n\r\n${token}\r\n`,
-						));
-					} else {
-						parts.push(Buffer.from(
-							`--${boundary}\r\nContent-Disposition: form-data; name="params"\r\n\r\n${JSON.stringify(fromFileParams)}\r\n`,
-						));
-					}
-
-					parts.push(Buffer.from(
-						`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${fileName}"\r\nContent-Type: ${fileMimeType}\r\n\r\n`,
-					));
-					parts.push(fileBuffer);
-					parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-
-					const multipartBody = Buffer.concat(parts);
+					const { body: multipart, contentType } = multipartBody(
+						jwtSecret
+							? { token: signJwt({ ...fromFileParams, operation: 'converter' }, jwtSecret) }
+							: { params: JSON.stringify(fromFileParams) },
+						{ name: fileName, mimeType: fileMimeType, data: fileBuffer },
+					);
 
 					if (outputMode === 'urlOnly') {
 						// async:true -> server returns JSON with fileUrl
@@ -1291,11 +1278,8 @@ export class OnlyofficeDocs implements INodeType {
 						conversionResponse = await this.helpers.httpRequest({
 							url: `${docsServerUrl}/converter/from-file`,
 							method: 'POST',
-							headers: {
-								'Content-Type': `multipart/form-data; boundary=${boundary}`,
-								Accept: 'application/json',
-							},
-							body: multipartBody,
+							headers: { 'Content-Type': contentType, Accept: 'application/json' },
+							body: multipart,
 							json: true,
 						}) as IDataObject;
 					} else {
@@ -1304,10 +1288,8 @@ export class OnlyofficeDocs implements INodeType {
 						const outputFileBuffer = await this.helpers.httpRequest({
 							url: `${docsServerUrl}/converter/from-file`,
 							method: 'POST',
-							headers: {
-								'Content-Type': `multipart/form-data; boundary=${boundary}`,
-							},
-							body: multipartBody,
+							headers: { 'Content-Type': contentType },
+							body: multipart,
 							encoding: 'arraybuffer',
 						});
 
@@ -1355,7 +1337,7 @@ export class OnlyofficeDocs implements INodeType {
 						: 'converted';
 					requestBody.title = `${outputFileName}.${actualExtension}`;
 
-					const token = signJwt(requestBody, jwtSecret);
+					const token = signJwt({ ...requestBody, operation: 'converter' }, jwtSecret);
 					requestBody.token = token;
 
 					// eslint-disable-next-line @n8n/community-nodes/no-http-request-with-manual-auth -- JWT is derived from the request body; httpRequestWithAuthentication cannot handle body-dependent signing
