@@ -81,13 +81,6 @@ The ONLYOFFICE Docs node supports the following resources and operations:
 - Append Rows to Spreadsheet
 - Update Row in Spreadsheet
 
-### Supported formats
-The node supports conversion between 50+ formats including:
-- **Documents**: DOCX, DOC, ODT, RTF, TXT, PDF, HTML, EPUB
-- **Spreadsheets**: XLSX, XLS, ODS, CSV, PDF
-- **Presentations**: PPTX, PPT, ODP, PDF
-- **Images**: PNG, JPG, JPEG, SVG, BMP
-
 ## Credentials
 
 This node supports JWT-based authentication:
