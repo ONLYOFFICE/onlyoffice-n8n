@@ -109,7 +109,7 @@ Document Server happen only after the user confirms. Manual run in the user's WS
   from the Windows hosts file): use it for the DS URL and for file URLs served from WSL. Servers in WSL must listen
   on IPv4 (`0.0.0.0`) — WSL forwards only IPv4 listeners. The WSL IP itself is not reachable from Docker Desktop, and
   the DS must reach its own result URLs, which carry the host n8n called it by.
-- Check per touched operation: URL and binary source, File Data and URL Only, one error case with and without
+- Check per touched operation: URL source with File Data and URL Only, binary source, one error case with and without
   "Continue On Fail", two input items. Open the result file — a non-empty binary is not enough.
 
 Report in the PR which operations were run manually and against which Docs version.
@@ -139,8 +139,8 @@ Report in the PR which operations were run manually and against which Docs versi
 ## Review checklist
 
 1. Correctness: Conversion/DocBuilder fields match the API docs; body fields added before `signJwt`; optional
-   collection fields sent only when set, falsy-but-valid values (`0`, `false`, `00`) kept; all four conversion paths
-   (URL/binary × File Data/URL Only) still work; every token carries the `operation` claim of its endpoint.
+   collection fields sent only when set, falsy-but-valid values (`0`, `false`, `00`) kept; all three conversion paths
+   (URL × File Data/URL Only, binary) still work; every token carries the `operation` claim of its endpoint.
 2. Script safety: user data enters DocBuilder scripts only through `escapeJs` / `toJsonLiteral`.
 3. Items: one output per input (or documented), `pairedItem`, `continueOnFail`, `itemIndex` on errors.
 4. Security: no secrets in parameters, output JSON (e.g. Remove Password `password`), error messages; no new outbound

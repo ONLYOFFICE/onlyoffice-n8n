@@ -40,8 +40,9 @@ Docs 10.0+**: both from-file endpoints exist only there. `GET /meta/config` of a
   from-file purposes are called `converter-from-file` / `docbuilder-from-file`, but the wire value is still
   `converter` / `docbuilder` — sending the purpose name is refused with `-8`. `download` and `callback` are claims of
   the server's own outgoing requests and are refused inbound.
-- `credentialTest` posts a docx→pdf conversion of `https://example.com/test.docx` with `this.helpers.request` (the
-  only helper of `ICredentialTestFunctions`).
+- `credentialTest` posts `{c: 'version'}` to `/command` with `this.helpers.request` (the only helper of
+  `ICredentialTestFunctions`): `error: 0` → OK with the version, `6` → wrong secret. (`/converter` answers a wrong
+  secret with `-8`, which is why it is not used.)
 
 ## Conversion resource
 
@@ -62,11 +63,10 @@ Request paths (`execute`):
 - `key` (`n8n_<ms>_<rand>`, new per item, so the DS never serves a cached result) lives in `conversionParams` and is
   sent by both paths.
 - **URL source**: JSON `POST /converter`, `async: false`, `url`, `title`. The DS must be able to download `fileUrl`.
-- **Binary source**: multipart `POST /converter/from-file` (file part + `token`/`params`). File Data → `async:
-  false`, the response **is the converted file** (arraybuffer); on failure the DS answers with a JSON `{"error":N}`
-  body instead, which the node turns into an error. URL Only → `async: true`; on Docs 10 the first answer is
-  `{endConvert: false}` without a URL, and repeating the upload returns the file itself, so this combination has no
-  way to return a link. The token must not contain `url`; `key` and `filetype` are optional for this endpoint.
+- **Binary source**: multipart `POST /converter/from-file` (file part + `token`/`params`), `async: false`; the
+  response **is the converted file** (arraybuffer), also with `async: true`, so `outputMode` is shown only for the URL
+  source and a binary source always returns File Data. On failure the DS answers with a JSON `{"error":N}` body
+  instead, which the node turns into an error. The token must not contain `url`; `key` and `filetype` are optional for this endpoint.
 - No `fileUrl` and no `endConvert` → `pollConversion`: re-POST `/converter` with the request's own `key` (the DS does
   not return it) every 2 s, 60 attempts, then "Conversion timed out after 2 minutes".
 - File Data downloads `fileUrl` (DS public host — n8n must reach it). Output JSON: `success, fileName, inputFormat,
@@ -90,7 +90,7 @@ database error, `-7` input error, `-8` invalid token (secret or header mismatch)
 
 ## Workflows
 
-- **Bug fix**: trace parameter → `execute` branch (URL / binary × File Data / URL Only) → request → response → output.
+- **Bug fix**: trace parameter → `execute` branch (URL × File Data / URL Only, binary) → request → response → output.
   Fix all four combinations if the code is shared. First a unit test that fails without the fix, then the fix; lint,
   `pnpm test`, `### Fixed` entry (`onlyoffice-n8n-docs-development`).
 - **New conversion operation**: operation option (alphabetical, with `action`), parameters scoped by `displayOptions`,

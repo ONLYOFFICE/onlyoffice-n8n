@@ -3,6 +3,7 @@ import { createHmac } from 'crypto';
 import type { IDataObject } from 'n8n-workflow';
 import { describe, expect, it, vi } from 'vitest';
 
+import { OnlyofficeDocs } from '../../nodes/OnlyofficeDocs/OnlyofficeDocs.node';
 import {
 	binaryOf,
 	CREDENTIALS,
@@ -296,10 +297,12 @@ describe('conversion from binary input', () => {
 		});
 	});
 
-	it('requests an async conversion in URL Only mode', async () => {
-		const { output, requests } = await fromFile({ outputMode: 'urlOnly' }, DONE);
-		expect(decodeJwt(partsOf(requests[0]).token).payload.async).toBe(true);
-		expect(output[0].json.convertedUrl).toBe(RESULT_URL);
+	// /converter/from-file answers with the file even with async: true, never with a URL.
+	it('offers no URL Only output', () => {
+		const outputMode = new OnlyofficeDocs().description.properties.find(
+			(property) => property.name === 'outputMode',
+		)!;
+		expect(outputMode.displayOptions?.show?.fileSource).toEqual(['url']);
 	});
 
 	// The DS answers with a JSON error in place of the file.

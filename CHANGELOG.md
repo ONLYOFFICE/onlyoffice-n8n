@@ -9,6 +9,12 @@ Changelog] format and adhering to [Semantic Versioning].
 
 - Document Builder operations upload the script to `/docbuilder/from-file` of ONLYOFFICE Docs 10.0
 - Every request token carries the `operation` claim of its endpoint, as ONLYOFFICE Docs 10.0 checks it (`token.purposeCheck`), so the node works with the `strict` setting too
+- The credential test asks the Document Server for its version and shows it
+
+### Fixed
+
+- The credential test reported a wrong JWT secret as a successful connection
+- Binary Input with the URL Only output always failed: `/converter/from-file` returns the file, never a URL, so this output is no longer offered for Binary Input
 
 ## [0.0.2] - 2026-07-10
 
