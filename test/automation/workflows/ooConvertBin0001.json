@@ -1,0 +1,128 @@
+{
+	"id": "ooConvertBin0001",
+	"name": "ONLYOFFICE Docs test: Convert binary input (from-file)",
+	"active": false,
+	"settings": {
+		"executionOrder": "v1"
+	},
+	"nodes": [
+		{
+			"id": "00000000-0000-4000-8000-000000000001",
+			"name": "Start",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [
+				0,
+				0
+			],
+			"parameters": {}
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000002",
+			"position": [
+				260,
+				0
+			],
+			"name": "DOCX to ODT",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "conversion",
+				"operation": "convert",
+				"fileUrl": "={{ $env.FIXTURES_URL }}sample.docx",
+				"inputFormat": "docx",
+				"outputFormat": "odt",
+				"outputFileName": "source"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000003",
+			"position": [
+				520,
+				0
+			],
+			"name": "ODT to PDF",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "conversion",
+				"operation": "convertToPdf",
+				"fileSource": "binary",
+				"inputBinaryField": "data",
+				"inputFormat": "odt",
+				"outputFileName": "from-binary"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000004",
+			"position": [
+				520,
+				0
+			],
+			"name": "ODT Thumbnail",
+			"type": "@onlyoffice/n8n-nodes-docs.onlyofficeDocs",
+			"typeVersion": 1,
+			"parameters": {
+				"resource": "conversion",
+				"operation": "thumbnail",
+				"fileSource": "binary",
+				"inputBinaryField": "data",
+				"inputFormat": "odt",
+				"thumbnailFormat": "png",
+				"outputFileName": "thumb"
+			},
+			"credentials": {
+				"onlyofficeDocsApi": {
+					"id": "ooDocsTestCred01",
+					"name": "ONLYOFFICE Docs (tests)"
+				}
+			},
+			"onError": "continueRegularOutput"
+		}
+	],
+	"connections": {
+		"Start": {
+			"main": [
+				[
+					{
+						"node": "DOCX to ODT",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"DOCX to ODT": {
+			"main": [
+				[
+					{
+						"node": "ODT to PDF",
+						"type": "main",
+						"index": 0
+					},
+					{
+						"node": "ODT Thumbnail",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"pinData": {},
+	"tags": []
+}

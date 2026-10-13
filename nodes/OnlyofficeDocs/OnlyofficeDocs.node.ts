@@ -18,7 +18,13 @@ import {
 	getSpreadsheetFormatsConvertibleTo,
 	getThumbnailInputFormats,
 } from './formats';
-import { executeDocBuilder, executeMailMerge, pollConversion, signJwt } from './GenericFunctions';
+import {
+	executeDocBuilder,
+	executeMailMerge,
+	multipartBody,
+	pollConversion,
+	signJwt,
+} from './GenericFunctions';
 
 export class OnlyofficeDocs implements INodeType {
 	description: INodeTypeDescription = {
@@ -491,6 +497,8 @@ export class OnlyofficeDocs implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['conversion'],
+						// /converter/from-file answers with the file itself, never with a URL.
+						fileSource: ['url'],
 					},
 				},
 				options: [
@@ -1007,23 +1015,15 @@ export class OnlyofficeDocs implements INodeType {
 				const jwtSecret = credential.data!.jwtSecret as string;
 				const jwtHeader = (credential.data!.jwtHeader as string) || 'Authorization';
 
-				const payload: IDataObject = {
-					async: false,
-					filetype: 'docx',
-					key: `n8n_test_${Date.now()}`,
-					outputtype: 'pdf',
-					url: 'https://example.com/test.docx',
-				};
-
-				const token = signJwt(payload, jwtSecret);
-				payload.token = token;
+				const payload: IDataObject = { c: 'version' };
+				const token = signJwt({ ...payload, operation: 'command' }, jwtSecret);
 
 				try {
 					// eslint-disable-next-line @n8n/community-nodes/no-deprecated-workflow-functions -- ICredentialTestFunctions only provides request(), not httpRequest()
 					const response = await this.helpers.request({
-						url: `${docsServerUrl}/converter`,
+						url: `${docsServerUrl}/command`,
 						method: 'POST',
-						body: payload,
+						body: { ...payload, token },
 						headers: {
 							'Content-Type': 'application/json',
 							Accept: 'application/json',
@@ -1031,13 +1031,20 @@ export class OnlyofficeDocs implements INodeType {
 						},
 						json: true,
 					});
-					if (response.error === -8) {
-						return { status: 'OK', message: 'Connection successful' };
+					if (response.error === 0) {
+						return {
+							status: 'OK',
+							message: `Connection successful, ONLYOFFICE Docs ${response.version}`,
+						};
 					}
-					if (response.error === -6) {
+					// The command service answers 6 to a token it cannot verify.
+					if (response.error === 6) {
 						return { status: 'Error', message: 'JWT secret is invalid' };
 					}
-					return { status: 'OK', message: 'Connection successful' };
+					return {
+						status: 'Error',
+						message: `Document Server answered with error code ${response.error}`,
+					};
 				} catch (error) {
 					return {
 						status: 'Error',
@@ -1089,7 +1096,6 @@ export class OnlyofficeDocs implements INodeType {
 							i,
 							docsServerUrl,
 							jwtSecret,
-							jwtHeader,
 						);
 						for (const r of results) {
 							returnData.push({ ...r, pairedItem: items[i].pairedItem });
@@ -1103,7 +1109,6 @@ export class OnlyofficeDocs implements INodeType {
 						operation,
 						docsServerUrl,
 						jwtSecret,
-						jwtHeader,
 					);
 					for (const r of docResults) {
 						returnData.push({ ...r, pairedItem: items[i].pairedItem });
@@ -1113,7 +1118,9 @@ export class OnlyofficeDocs implements INodeType {
 
 				const fileSource = this.getNodeParameter('fileSource', i) as string;
 				const inputFormat = this.getNodeParameter('inputFormat', i) as string;
-				const outputMode = this.getNodeParameter('outputMode', i) as string;
+				// A binary input always comes back as a file, see /converter/from-file below.
+				const outputMode =
+					fileSource === 'url' ? (this.getNodeParameter('outputMode', i) as string) : 'binary';
 
 				let outputFormat: string;
 				let fileExtension: string | undefined;
@@ -1257,90 +1264,52 @@ export class OnlyofficeDocs implements INodeType {
 					const fileName = binaryData.fileName || `input.${inputFormat}`;
 					const fileMimeType = binaryData.mimeType || 'application/octet-stream';
 
-					const fromFileParams: IDataObject = {
-						...conversionParams,
-						async: outputMode === 'urlOnly',
-					};
+					const { body: multipart, contentType } = multipartBody(
+						jwtSecret
+							? { token: signJwt({ ...conversionParams, async: false, operation: 'converter' }, jwtSecret) }
+							: { params: JSON.stringify({ ...conversionParams, async: false }) },
+						{ name: fileName, mimeType: fileMimeType, data: fileBuffer },
+					);
 
-					const boundary = `----n8nFormBoundary${Date.now().toString(36)}`;
-					const parts: Buffer[] = [];
+					// The server answers with the converted file itself.
+					// eslint-disable-next-line @n8n/community-nodes/no-http-request-with-manual-auth -- JWT is sent as a multipart form field; httpRequestWithAuthentication cannot handle body-dependent signing
+					const outputFileBuffer = await this.helpers.httpRequest({
+						url: `${docsServerUrl}/converter/from-file`,
+						method: 'POST',
+						headers: { 'Content-Type': contentType },
+						body: multipart,
+						encoding: 'arraybuffer',
+					});
 
-					if (jwtSecret) {
-						// The from-file endpoint accepts only tokens with the operation claim.
-						const token = signJwt({ ...fromFileParams, operation: 'converter' }, jwtSecret);
-						parts.push(Buffer.from(
-							`--${boundary}\r\nContent-Disposition: form-data; name="token"\r\n\r\n${token}\r\n`,
-						));
-					} else {
-						parts.push(Buffer.from(
-							`--${boundary}\r\nContent-Disposition: form-data; name="params"\r\n\r\n${JSON.stringify(fromFileParams)}\r\n`,
-						));
-					}
-
-					parts.push(Buffer.from(
-						`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${fileName}"\r\nContent-Type: ${fileMimeType}\r\n\r\n`,
-					));
-					parts.push(fileBuffer);
-					parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-
-					const multipartBody = Buffer.concat(parts);
-
-					if (outputMode === 'urlOnly') {
-						// async:true -> server returns JSON with fileUrl
-						// eslint-disable-next-line @n8n/community-nodes/no-http-request-with-manual-auth -- JWT is sent as a multipart form field; httpRequestWithAuthentication cannot handle body-dependent signing
-						conversionResponse = await this.helpers.httpRequest({
-							url: `${docsServerUrl}/converter/from-file`,
-							method: 'POST',
-							headers: {
-								'Content-Type': `multipart/form-data; boundary=${boundary}`,
-								Accept: 'application/json',
-							},
-							body: multipartBody,
-							json: true,
-						}) as IDataObject;
-					} else {
-						// async:false -> server returns converted file directly
-						// eslint-disable-next-line @n8n/community-nodes/no-http-request-with-manual-auth -- JWT is sent as a multipart form field; httpRequestWithAuthentication cannot handle body-dependent signing
-						const outputFileBuffer = await this.helpers.httpRequest({
-							url: `${docsServerUrl}/converter/from-file`,
-							method: 'POST',
-							headers: {
-								'Content-Type': `multipart/form-data; boundary=${boundary}`,
-							},
-							body: multipartBody,
-							encoding: 'arraybuffer',
-						});
-
-						const outputFile = Buffer.from(outputFileBuffer as ArrayBuffer);
-						// On failure the server answers with JSON instead of the file.
-						if (outputFile.subarray(0, 9).toString() === '{"error":') {
-							throw new NodeOperationError(
-								this.getNode(),
-								`Conversion failed with error code: ${JSON.parse(outputFile.toString()).error}`,
-								{ itemIndex: i },
-							);
-						}
-
-						const outputFileName = this.getNodeParameter('outputFileName', i) as string;
-						const fullFileName = `${outputFileName}.${actualExtension}`;
-						const resultBinaryData = await this.helpers.prepareBinaryData(
-							outputFile,
-							fullFileName,
+					const outputFile = Buffer.from(outputFileBuffer as ArrayBuffer);
+					// On failure the server answers with JSON instead of the file.
+					if (outputFile.subarray(0, 9).toString() === '{"error":') {
+						throw new NodeOperationError(
+							this.getNode(),
+							`Conversion failed with error code: ${JSON.parse(outputFile.toString()).error}`,
+							{ itemIndex: i },
 						);
-						const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i) as string;
-						returnData.push({
-							json: {
-								success: true,
-								fileName: fullFileName,
-								inputFormat,
-								outputFormat,
-								operation,
-							},
-							binary: { [binaryPropertyName]: resultBinaryData },
-							pairedItem: items[i].pairedItem,
-						});
-						continue;
 					}
+
+					const outputFileName = this.getNodeParameter('outputFileName', i) as string;
+					const fullFileName = `${outputFileName}.${actualExtension}`;
+					const resultBinaryData = await this.helpers.prepareBinaryData(
+						outputFile,
+						fullFileName,
+					);
+					const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i) as string;
+					returnData.push({
+						json: {
+							success: true,
+							fileName: fullFileName,
+							inputFormat,
+							outputFormat,
+							operation,
+						},
+						binary: { [binaryPropertyName]: resultBinaryData },
+						pairedItem: items[i].pairedItem,
+					});
+					continue;
 				} else {
 					// --- URL mode: POST /converter (JSON body) ---
 					const fileUrl = this.getNodeParameter('fileUrl', i) as string;
@@ -1355,7 +1324,7 @@ export class OnlyofficeDocs implements INodeType {
 						: 'converted';
 					requestBody.title = `${outputFileName}.${actualExtension}`;
 
-					const token = signJwt(requestBody, jwtSecret);
+					const token = signJwt({ ...requestBody, operation: 'converter' }, jwtSecret);
 					requestBody.token = token;
 
 					// eslint-disable-next-line @n8n/community-nodes/no-http-request-with-manual-auth -- JWT is derived from the request body; httpRequestWithAuthentication cannot handle body-dependent signing

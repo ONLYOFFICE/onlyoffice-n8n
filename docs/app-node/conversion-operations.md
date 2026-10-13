@@ -18,7 +18,8 @@ Every Conversion operation takes these parameters:
   file. Shown when **File Source** is **Binary Input**.
 - **Input Format Name or ID**: Select the format of the source file. The list
   contains only the formats the operation can convert.
-- **Output Mode**: Select how to return the result.
+- **Output Mode**: Select how to return the result. Shown when **File Source**
+  is **URL**; a **Binary Input** always returns the converted file.
   - Select **File Data** to download the converted file and return it as
     binary data.
   - Select **URL Only** to return only the URL of the converted file on the

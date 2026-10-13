@@ -9,17 +9,16 @@ description:
 
 # ONLYOFFICE Docs n8n node
 
-One node `ONLYOFFICE Docs` (`onlyofficeDocs`) with resources **Conversion** (`/converter`) and **Document Builder**
-(`/docbuilder`), one credential `onlyofficeDocsApi`. README requires **ONLYOFFICE Docs 10.0+**: binary input
-(`/converter/from-file`) exists only there. Conversion by URL and Document Builder also work on 9.4.1, the image CI
-tests against.
+One node `ONLYOFFICE Docs` (`onlyofficeDocs`) with resources **Conversion** (`/converter`, `/converter/from-file`)
+and **Document Builder** (`/docbuilder/from-file`), one credential `onlyofficeDocsApi`. README requires **ONLYOFFICE
+Docs 10.0+**: both from-file endpoints exist only there. `GET /meta/config` of a Document Server lists its endpoints.
 
 ## Repo map
 
 | Path                                           | What                                                                                                                                    |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `nodes/OnlyofficeDocs/OnlyofficeDocs.node.ts`  | Description (all parameters of both resources), credential test, loadOptions, `execute` (Conversion inline; Document Builder delegated) |
-| `nodes/OnlyofficeDocs/GenericFunctions.ts`     | `signJwt`, `escapeJs`, `buildScript`, `pollConversion`, `executeDocBuilder`, `executeMailMerge`                                         |
+| `nodes/OnlyofficeDocs/GenericFunctions.ts`     | `signJwt`, `multipartBody`, `escapeJs`, `buildScript`, `pollConversion`, `executeDocBuilder`, `executeMailMerge`                        |
 | `nodes/OnlyofficeDocs/scripts.ts`              | DocBuilder script templates (`onlyoffice-n8n-docbuilder`)                                                                               |
 | `nodes/OnlyofficeDocs/formats.ts`              | Format option lists from `document-formats/onlyoffice-docs-formats.json`                                                                |
 | `nodes/OnlyofficeDocs/document-formats/`       | Vendored copy of ONLYOFFICE/document-formats (not a submodule) — replace whole, never hand-edit                                         |
@@ -28,14 +27,22 @@ tests against.
 
 ## Credential and JWT
 
-- `docsServerUrl` trailing `/` stripped, paths `/converter`, `/converter/from-file`, `/docbuilder` appended.
+- `docsServerUrl` trailing `/` stripped, paths `/converter`, `/converter/from-file`, `/docbuilder/from-file`,
+  `/command` appended.
 - `signJwt(payload, secret)`: hand-written HS256 (`crypto.createHmac`), no `iat`/`exp`. JSON requests: sign the body
   **before** adding `token`, send it in `body.token` and in `<jwtHeader>: Bearer <token>`. New body fields go before
-  signing. DocBuilder signs `{}` (header only). Multipart from-file: token as form field `token` with the params plus
-  `operation: 'converter'` (Docs 10 refuses from-file tokens without this claim with `-8`), or a `params` field when
-  there is no secret.
-- `credentialTest` posts a docx→pdf conversion of `https://example.com/test.docx` with `this.helpers.request` (the
-  only helper of `ICredentialTestFunctions`).
+  signing. Multipart from-file requests (`multipartBody`): token as form field `token`, or a `params` field with plain
+  JSON when there is no secret.
+- Every token carries the `operation` claim of its endpoint, only in the token, not in the body: `converter` for
+  `/converter` (also polling) and `/converter/from-file`, `docbuilder` for `/docbuilder/from-file`, `command` for
+  `/command`. Docs 10 setting `token.purposeCheck`: `validate` (default) refuses a claim naming another
+  endpoint, `strict` also refuses a missing claim; the from-file endpoints require it always. Inside the server the
+  from-file purposes are called `converter-from-file` / `docbuilder-from-file`, but the wire value is still
+  `converter` / `docbuilder` — sending the purpose name is refused with `-8`. `download` and `callback` are claims of
+  the server's own outgoing requests and are refused inbound.
+- `credentialTest` posts `{c: 'version'}` to `/command` with `this.helpers.request` (the only helper of
+  `ICredentialTestFunctions`): `error: 0` → OK with the version, `6` → wrong secret. (`/converter` answers a wrong
+  secret with `-8`, which is why it is not used.)
 
 ## Conversion resource
 
@@ -56,11 +63,10 @@ Request paths (`execute`):
 - `key` (`n8n_<ms>_<rand>`, new per item, so the DS never serves a cached result) lives in `conversionParams` and is
   sent by both paths.
 - **URL source**: JSON `POST /converter`, `async: false`, `url`, `title`. The DS must be able to download `fileUrl`.
-- **Binary source**: multipart `POST /converter/from-file` (hand-built boundary, file part + `token`/`params`).
-  File Data → `async: false`, the response **is the converted file** (arraybuffer); on failure the DS answers with a
-  JSON `{"error":N}` body instead, which the node turns into an error. URL Only → `async: true`; on Docs 10 the first
-  answer is `{endConvert: false}` without a URL, and repeating the upload returns the file itself, so this
-  combination has no way to return a link.
+- **Binary source**: multipart `POST /converter/from-file` (file part + `token`/`params`), `async: false`; the
+  response **is the converted file** (arraybuffer), also with `async: true`, so `outputMode` is shown only for the URL
+  source and a binary source always returns File Data. On failure the DS answers with a JSON `{"error":N}` body
+  instead, which the node turns into an error. The token must not contain `url`; `key` and `filetype` are optional for this endpoint.
 - No `fileUrl` and no `endConvert` → `pollConversion`: re-POST `/converter` with the request's own `key` (the DS does
   not return it) every 2 s, 60 attempts, then "Conversion timed out after 2 minutes".
 - File Data downloads `fileUrl` (DS public host — n8n must reach it). Output JSON: `success, fileName, inputFormat,
@@ -84,8 +90,8 @@ database error, `-7` input error, `-8` invalid token (secret or header mismatch)
 
 ## Workflows
 
-- **Bug fix**: trace parameter → `execute` branch (URL / binary × File Data / URL Only) → request → response → output.
-  Fix all four combinations if the code is shared. First a unit test that fails without the fix, then the fix; lint,
+- **Bug fix**: trace parameter → `execute` branch (URL × File Data / URL Only, binary) → request → response → output.
+  Fix all three paths if the code is shared. First a unit test that fails without the fix, then the fix; lint,
   `pnpm test`, `### Fixed` entry (`onlyoffice-n8n-docs-development`).
 - **New conversion operation**: operation option (alphabetical, with `action`), parameters scoped by `displayOptions`,
   `getInputFormats` case, `execute` case filling `conversionParams` + `outputFormat`; unit test of the request body,

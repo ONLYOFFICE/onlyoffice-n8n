@@ -2,7 +2,12 @@
 import { createHmac } from 'crypto';
 import { describe, expect, it } from 'vitest';
 
-import { buildScript, escapeJs, signJwt } from '../../nodes/OnlyofficeDocs/GenericFunctions';
+import {
+	buildScript,
+	escapeJs,
+	multipartBody,
+	signJwt,
+} from '../../nodes/OnlyofficeDocs/GenericFunctions';
 import { decodeJwt } from './helpers';
 
 describe('signJwt', () => {
@@ -19,6 +24,31 @@ describe('signJwt', () => {
 
 	it('changes the signature when the secret changes', () => {
 		expect(signJwt({}, 'a').split('.')[2]).not.toBe(signJwt({}, 'b').split('.')[2]);
+	});
+});
+
+describe('multipartBody', () => {
+	/** Header lines of the file part. */
+	const fileHeaders = (name: string, mimeType: string) => {
+		const { body, contentType } = multipartBody(
+			{ token: 't' },
+			{ name, mimeType, data: Buffer.from('data') },
+		);
+		const boundary = contentType.split('boundary=')[1];
+		const [, , file] = body.toString('latin1').split(`--${boundary}`);
+		return file.split('\r\n\r\n')[0].split('\r\n').filter(Boolean);
+	};
+
+	// The file name and MIME type come from the input item; a line break must not add headers.
+	it('keeps a file name and a MIME type with line breaks inside their header lines', () => {
+		expect(fileHeaders('a"b\r\nc.docx', 'text/plain\r\nX-Injected: 1')).toEqual([
+			'Content-Disposition: form-data; name="file"; filename="a_b__c.docx"',
+			'Content-Type: text/plainX-Injected: 1',
+		]);
+	});
+
+	it('sends application/octet-stream for an empty MIME type', () => {
+		expect(fileHeaders('a.docx', '\r\n')[1]).toBe('Content-Type: application/octet-stream');
 	});
 });
 

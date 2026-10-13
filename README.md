@@ -102,7 +102,7 @@ This node supports JWT-based authentication:
 
 ### Document Builder
 
-Document Builder operations use the ONLYOFFICE Docs `/docbuilder` web service endpoint. All operations return `fileName`, `outputUrl`, and binary file data (where applicable) so results can be passed directly between nodes in a workflow.
+Document Builder operations upload their script to the ONLYOFFICE Docs `/docbuilder/from-file` web service endpoint. All operations return `fileName`, `outputUrl`, and binary file data (where applicable) so results can be passed directly between nodes in a workflow.
 
 #### Extract Text
 Extracts all paragraphs and tables from a DOCX as structured JSON. Returns `paragraphs[]` and `tables[]` arrays.

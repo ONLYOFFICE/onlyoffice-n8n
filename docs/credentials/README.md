@@ -45,7 +45,13 @@ To configure this credential, you'll need:
    `local.json`, or the `JWT_HEADER` environment variable in Docker).
 5. Click the **Save** button to save your credentials.
 
-n8n tests the credentials with a conversion request to the Document Server.
+n8n tests the credentials by asking the Document Server for its version. A
+wrong **JWT Secret** fails the test.
+
+ONLYOFFICE Docs 10.0 checks what each token is for
+(`services.CoAuthoring.token.purposeCheck` in `local.json`). The node marks
+every token for the service it calls, so it works with both the default
+`validate` and the `strict` setting.
 
 ### Related resources
 

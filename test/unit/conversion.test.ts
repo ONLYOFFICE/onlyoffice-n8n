@@ -3,7 +3,16 @@ import { createHmac } from 'crypto';
 import type { IDataObject } from 'n8n-workflow';
 import { describe, expect, it, vi } from 'vitest';
 
-import { binaryOf, CREDENTIALS, decodeJwt, DS, type Request, runNode } from './helpers';
+import { OnlyofficeDocs } from '../../nodes/OnlyofficeDocs/OnlyofficeDocs.node';
+import {
+	binaryOf,
+	CREDENTIALS,
+	decodeJwt,
+	DS,
+	formPartsOf as partsOf,
+	type Request,
+	runNode,
+} from './helpers';
 
 // Polling waits 2 s between requests.
 vi.mock('n8n-workflow', async (importOriginal) => ({
@@ -35,7 +44,8 @@ const convert = (params: IDataObject, ...answers: IDataObject[]) =>
 // ---- URL input ----
 
 describe('conversion from a URL', () => {
-	it('signs the body with the secret in body and header', async () => {
+	// Docs 10 checks the operation claim against the endpoint; earlier versions ignore it.
+	it('signs the body with the converter operation claim, in body and header', async () => {
 		const { requests } = await convert({ operation: 'convert', outputFormat: 'pdf' });
 		const { token, ...body } = requests[0].body;
 		const [header, payload, signature] = (token as string).split('.');
@@ -44,7 +54,7 @@ describe('conversion from a URL', () => {
 				.update(`${header}.${payload}`)
 				.digest('base64url'),
 		);
-		expect(decodeJwt(token as string).payload).toEqual(body);
+		expect(decodeJwt(token as string).payload).toEqual({ ...body, operation: 'converter' });
 		expect(requests[0].headers[CREDENTIALS.jwtHeader]).toBe(`Bearer ${token}`);
 	});
 
@@ -207,7 +217,7 @@ describe('conversion polling and errors', () => {
 				outputtype: 'pdf',
 				filetype: 'docx',
 			});
-			expect(decodeJwt(token as string).payload).toEqual(body);
+			expect(decodeJwt(token as string).payload).toEqual({ ...body, operation: 'converter' });
 		}
 		expect(output[0].json.convertedUrl).toBe(RESULT_URL);
 	});
@@ -240,16 +250,6 @@ describe('conversion from binary input', () => {
 		json: {},
 		binary: { data: { data: btoa('source'), fileName: 'in.docx', mimeType: '' } },
 	};
-
-	/** Named parts of the multipart body. */
-	const partsOf = (request: Request) =>
-		Object.fromEntries(
-			[
-				...request.body
-					.toString('latin1')
-					.matchAll(/name="(\w+)"[^\r]*\r\n(?:[^\r]+\r\n)?\r\n(.*?)\r\n--/gs),
-			].map((match) => [match[1], match[2]]),
-		);
 
 	const fromFile = (params: IDataObject, answer: unknown, credentials?: IDataObject) =>
 		runNode({
@@ -297,10 +297,12 @@ describe('conversion from binary input', () => {
 		});
 	});
 
-	it('requests an async conversion in URL Only mode', async () => {
-		const { output, requests } = await fromFile({ outputMode: 'urlOnly' }, DONE);
-		expect(decodeJwt(partsOf(requests[0]).token).payload.async).toBe(true);
-		expect(output[0].json.convertedUrl).toBe(RESULT_URL);
+	// /converter/from-file answers with the file even with async: true, never with a URL.
+	it('offers no URL Only output', () => {
+		const outputMode = new OnlyofficeDocs().description.properties.find(
+			(property) => property.name === 'outputMode',
+		)!;
+		expect(outputMode.displayOptions?.show?.fileSource).toEqual(['url']);
 	});
 
 	// The DS answers with a JSON error in place of the file.

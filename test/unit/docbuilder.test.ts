@@ -2,16 +2,28 @@
 import type { IDataObject } from 'n8n-workflow';
 import { describe, expect, it } from 'vitest';
 
-import { callsOf, CREDENTIALS, decodeJwt, DS, type Request, runNode } from './helpers';
+import {
+	callsOf,
+	CREDENTIALS,
+	decodeJwt,
+	DS,
+	formPartsOf,
+	type Request,
+	runNode,
+} from './helpers';
 
 const OUTPUT_URL = `${DS}/cache/output`;
 const FILE_URL = 'https://files/in.docx?name="a"&x=\\1';
 // Tries to break out of a string literal. No newline: Create Document splits text by lines.
 const HOSTILE = 'He said "hi"\\n"); builder.CloseFile(); Api.X("';
 
+/** The script uploaded to /docbuilder/from-file. */
+const scriptOf = (request: Request) =>
+	Buffer.from(formPartsOf(request).file, 'latin1').toString('utf8');
+
 /**
- * Run a Document Builder operation against a fake /docbuilder that answers `answer` and serves
- * `download` as the output file. Returns the output, the requests and the scripts sent.
+ * Run a Document Builder operation against a fake /docbuilder/from-file that answers `answer`
+ * and serves `download` as the output file. Returns the output, the requests and the scripts sent.
  */
 async function build(params: IDataObject, download: unknown = 'file', answer?: IDataObject) {
 	const scripts: string[] = [];
@@ -19,8 +31,8 @@ async function build(params: IDataObject, download: unknown = 'file', answer?: I
 		params: { resource: 'docbuilder', ...params },
 		http: (request: Request) => {
 			if (request.method === 'GET') return Buffer.from(download as string);
-			expect(request.url).toBe(`${DS}/docbuilder`);
-			scripts.push(request.body.toString());
+			expect(request.url).toBe(`${DS}/docbuilder/from-file`);
+			scripts.push(scriptOf(request));
 			return answer ?? { urls: { 'output.bin': OUTPUT_URL } };
 		},
 	});
@@ -33,13 +45,28 @@ const textsOf = (script: string) => callsOf(script, 'AddText').map(([text]) => t
 // ---- Request ----
 
 describe('Document Builder request', () => {
-	it('posts the script as raw UTF-8 with a signed token in the configured header', async () => {
-		const { requests } = await build({ operation: 'createDocument', builderText: 'Hello' });
-		expect(requests[0].headers['Content-Type']).toBe('application/octet-stream');
-		expect(Buffer.isBuffer(requests[0].body)).toBe(true);
-		const token = String(requests[0].headers[CREDENTIALS.jwtHeader]).replace('Bearer ', '');
-		expect(decodeJwt(token).header).toEqual({ alg: 'HS256', typ: 'JWT' });
+	it('uploads the script to /docbuilder/from-file with a docbuilder token', async () => {
+		const { requests, scripts } = await build({ operation: 'createDocument', builderText: 'Hello' });
+		expect(requests[0].headers['Content-Type']).toMatch(/^multipart\/form-data; boundary=/);
+		expect(scripts[0]).toContain('builder.CreateFile("docx");');
+		// Docs 10 refuses a from-file token without the operation claim.
+		const { header, payload } = decodeJwt(formPartsOf(requests[0]).token);
+		expect(header).toEqual({ alg: 'HS256', typ: 'JWT' });
+		expect(payload).toEqual({ async: false, operation: 'docbuilder' });
 	});
+
+	it('sends the parameters as plain JSON without a JWT secret', async () => {
+		const { requests } = await runNode({
+			params: { resource: 'docbuilder', operation: 'createDocument', builderText: 'Hello' },
+			credentials: { ...CREDENTIALS, jwtSecret: '' },
+			http: (request: Request) =>
+				request.method === 'GET' ? Buffer.from('file') : { urls: { 'output.bin': OUTPUT_URL } },
+		});
+		const parts = formPartsOf(requests[0]);
+		expect(parts.token).toBeUndefined();
+		expect(JSON.parse(parts.params)).toEqual({ async: false });
+	});
+
 
 	it('fails with the builder error code', async () => {
 		await expect(build({ operation: 'createDocument' }, '', { error: -3 })).rejects.toThrow(

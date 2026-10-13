@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-DS_IMAGE=${DS_IMAGE:-onlyoffice/documentserver-de:latest}
+DS_IMAGE=${DS_IMAGE:-onlyoffice/documentserver-de:10.0}
 NETWORK=onlyoffice-n8n-tests
 DS=onlyoffice-n8n-tests-ds
 

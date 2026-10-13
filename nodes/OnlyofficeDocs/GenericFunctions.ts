@@ -28,12 +28,43 @@ const POLL_INTERVAL_MS = 2000;
 
 /**
  * Sign a JWT token using HMAC-SHA256.
+ *
+ * Docs 10 checks the `operation` claim against the endpoint: `converter` for /converter and
+ * /converter/from-file, `docbuilder` for /docbuilder/from-file, `command` for /command. The
+ * from-file endpoints refuse a token without it.
  */
 export function signJwt(payload: IDataObject, secret: string): string {
 	const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
 	const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
 	const signature = createHmac('sha256', secret).update(`${header}.${body}`).digest('base64url');
 	return `${header}.${body}.${signature}`;
+}
+
+/**
+ * Build a multipart/form-data body from text fields and one file.
+ */
+export function multipartBody(
+	fields: Record<string, string>,
+	file: { name: string; mimeType: string; data: Buffer },
+): { body: Buffer; contentType: string } {
+	const boundary = `----n8nFormBoundary${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+	const parts: Buffer[] = [];
+	for (const [name, value] of Object.entries(fields)) {
+		parts.push(
+			Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`),
+		);
+	}
+	// Both come from the input item: a line break would add header lines or parts.
+	const fileName = file.name.replace(/["\r\n]/g, '_');
+	const mimeType = file.mimeType.replace(/[\r\n]/g, '') || 'application/octet-stream';
+	parts.push(
+		Buffer.from(
+			`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${fileName}"\r\nContent-Type: ${mimeType}\r\n\r\n`,
+		),
+		file.data,
+		Buffer.from(`\r\n--${boundary}--\r\n`),
+	);
+	return { body: Buffer.concat(parts), contentType: `multipart/form-data; boundary=${boundary}` };
 }
 
 /**
@@ -92,7 +123,7 @@ export async function pollConversion(
 			outputtype: outputFormat,
 			filetype: inputFormat,
 		};
-		const pollToken = signJwt(pollBody, jwtSecret);
+		const pollToken = signJwt({ ...pollBody, operation: 'converter' }, jwtSecret);
 		pollBody.token = pollToken;
 
 		response = await context.helpers.httpRequest({
@@ -136,13 +167,39 @@ const EXTRACT_SCRIPTS: Record<string, string> = {
 	extractMetadata: EXTRACT_METADATA,
 };
 
+/**
+ * Run a Document Builder script and return the answer of the Document Server, which takes the
+ * script as an upload to /docbuilder/from-file.
+ */
+async function runBuilderScript(
+	context: IExecuteFunctions,
+	script: string,
+	docsServerUrl: string,
+	jwtSecret: string,
+): Promise<IDataObject> {
+	const params: IDataObject = { async: false };
+	const { body, contentType } = multipartBody(
+		jwtSecret
+			? { token: signJwt({ ...params, operation: 'docbuilder' }, jwtSecret) }
+			: { params: JSON.stringify(params) },
+		{ name: 'script.docbuilder', mimeType: 'application/octet-stream', data: Buffer.from(script, 'utf8') },
+	);
+	return (await context.helpers.httpRequest({
+		url: `${docsServerUrl}/docbuilder/from-file`,
+		method: 'POST',
+		headers: { 'Content-Type': contentType, Accept: 'application/json' },
+		body,
+		json: true,
+	})) as IDataObject;
+}
+
 /** Operations that always download the result to parse JSON content. */
 const EXTRACT_ONLY_OPERATIONS = new Set([
 	'extractText', 'extractOutline', 'extractTables', 'extractChunks', 'extractMetadata',
 ]);
 
 /**
- * Execute a Document Builder operation by sending the script as raw body.
+ * Execute a Document Builder operation and return its result.
  */
 export async function executeDocBuilder(
 	this: IExecuteFunctions,
@@ -150,7 +207,6 @@ export async function executeDocBuilder(
 	operation: string,
 	docsServerUrl: string,
 	jwtSecret: string,
-	jwtHeader: string,
 ): Promise<INodeExecutionData[]> {
 	const isExtract = EXTRACT_ONLY_OPERATIONS.has(operation);
 	const outputMode = isExtract
@@ -288,19 +344,7 @@ export async function executeDocBuilder(
 			});
 	}
 
-	const token = signJwt({}, jwtSecret);
-
-	const builderResponse = await this.helpers.httpRequest({
-		url: `${docsServerUrl}/docbuilder`,
-		method: 'POST',
-		body: Buffer.from(scriptContent, 'utf8'),
-		headers: {
-			'Content-Type': 'application/octet-stream',
-			Accept: 'application/json',
-			[jwtHeader]: `Bearer ${token}`,
-		},
-		json: true,
-	});
+	const builderResponse = await runBuilderScript(this, scriptContent, docsServerUrl, jwtSecret);
 
 	if (builderResponse.error) {
 		throw new NodeOperationError(
@@ -384,7 +428,6 @@ export async function executeMailMerge(
 	itemIndex: number,
 	docsServerUrl: string,
 	jwtSecret: string,
-	jwtHeader: string,
 ): Promise<INodeExecutionData[]> {
 	const fileUrl = this.getNodeParameter('builderFileUrl', itemIndex) as string;
 	const recordsParam = this.getNodeParameter('builderRecords', itemIndex) as string | IDataObject[];
@@ -403,19 +446,7 @@ export async function executeMailMerge(
 			OUTPUT_FORMAT: escapeJs(outputFormat),
 		});
 
-		const token = signJwt({}, jwtSecret);
-
-		const builderResponse = await this.helpers.httpRequest({
-			url: `${docsServerUrl}/docbuilder`,
-			method: 'POST',
-			body: Buffer.from(scriptContent, 'utf8'),
-			headers: {
-				'Content-Type': 'application/octet-stream',
-				Accept: 'application/json',
-				[jwtHeader]: `Bearer ${token}`,
-			},
-			json: true,
-		});
+		const builderResponse = await runBuilderScript(this, scriptContent, docsServerUrl, jwtSecret);
 
 		if (builderResponse.error) {
 			throw new NodeOperationError(

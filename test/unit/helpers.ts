@@ -91,6 +91,16 @@ export const decodeJwt = (token: string) => {
 
 export const binaryOf = (item: INodeExecutionData) => Buffer.from(item.binary!.data.data, 'base64');
 
+/** Named parts of a multipart/form-data body; a file part gives the file content. */
+export const formPartsOf = (request: Request): Record<string, string> =>
+	Object.fromEntries(
+		[
+			...request.body
+				.toString('latin1')
+				.matchAll(/name="(\w+)"[^\r]*\r\n(?:[^\r]+\r\n)?\r\n(.*?)\r\n--/gs),
+		].map((match) => [match[1], match[2]]),
+	);
+
 /**
  * Run a Document Builder script against recording stubs of `builder` and `Api` and return the
  * arguments of every call to `method`. Api calls return stubs, so the script runs to the end and

@@ -2,17 +2,18 @@
 name: onlyoffice-n8n-docbuilder
 description:
   The Document Builder resource of the ONLYOFFICE Docs n8n node - how scripts in scripts.ts are built and sent
-  to /docbuilder, placeholder and escaping rules, the txt-JSON trick of extract operations, output shapes, mail merge,
+  to /docbuilder/from-file, placeholder and escaping rules, the txt-JSON trick of extract operations, output shapes, mail merge,
   and how to add an operation. Use for any change to Document Builder operations or scripts.
 ---
 
 # Document Builder resource
 
 `resource: 'docbuilder'`. Each operation = one JS template in `scripts.ts`, filled in `executeDocBuilder`
-(`GenericFunctions.ts`) and POSTed as raw body to `<docsServerUrl>/docbuilder` (`Content-Type:
-application/octet-stream`, header `<jwtHeader>: Bearer signJwt({})`). Response `{ urls: { "output.<ext>": url } }` or
-`{ error }`; the node takes the first URL. API: https://api.onlyoffice.com/docs/document-builder/ (builder / Api
-classes); the web service works on Docs 9.4.1 as well.
+(`GenericFunctions.ts`) and sent by `runBuilderScript`: a multipart upload to `<docsServerUrl>/docbuilder/from-file`
+(file part `script.docbuilder`, form field `token` = `signJwt({ async: false, operation: 'docbuilder' })`, or `params`
+without a secret). The from-file endpoint takes one file only, refuses `url` in the token and `-3`s on `key`;
+`argument` works. Response `{ urls: { "output.<ext>": url } }` or `{ error }`; the node takes the first URL. API:
+https://api.onlyoffice.com/docs/document-builder/ (builder / Api classes).
 
 ## Script building (the injection boundary)
 

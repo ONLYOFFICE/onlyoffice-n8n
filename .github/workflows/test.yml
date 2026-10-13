@@ -33,7 +33,8 @@ jobs:
     timeout-minutes: 45
     services:
       documentserver:
-        image: onlyoffice/documentserver-de:latest
+        # A fixed tag: a runner keeps a cached latest and does not pull it again.
+        image: onlyoffice/documentserver-de:10.0
         env:
           JWT_SECRET: automation-secret-0123456789abcdef0123
           # The Document Server downloads the fixtures from the job container (a private address).
