@@ -54,6 +54,11 @@ function serveFixtures() {
 
 export default async function setup(project: TestProject) {
 	const dsVersion = await documentServerVersion();
+	// The from-file endpoints of the node exist since 10.0; an older server fails every Document
+	// Builder and Binary Input test with 404.
+	if (Number(dsVersion.split('.')[0]) < 10) {
+		throw new Error(`Document Server ${dsVersion} at ${DS_URL}: the tests need 10.0 or later`);
+	}
 	const fixtures = serveFixtures();
 	const home = mkdtempSync(join(tmpdir(), 'n8n-'));
 	const environment: N8nEnvironment = {
